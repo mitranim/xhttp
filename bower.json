@@ -8,5 +8,13 @@
     "ajax",
     "promises",
     "browser"
-  ]
+  ],
+  "ignore": [
+    "./lib",
+    "./scripts"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/Mitranim/xhttp.git"
+  }
 }
