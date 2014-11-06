@@ -386,7 +386,7 @@ exports.typeRegs = typeRegs
 *   var xhttp = require('xhttp')
 *   var xhttp = require('xhttp/custom')(Promise)
 *   var xhttp = require('xhttp/custom')(require('q').Promise)
-*   var xhttp = require('xhttp/custom')(require('bluebird').Promise)
+*   var xhttp = require('xhttp/custom')(require('bluebird'))
 */
 
 /******************************* Dependencies ********************************/
@@ -430,10 +430,25 @@ module.exports = function (promiseConstructor) {
   }
 
   /**
-  * Failure handler. Applies error interceptors and calls the given
-  * promise rejecter.
+  * Failure handler. Applies error interceptors and returns a rejection reason
+  * based on the given xhr and options.
   */
-  function handleFailure (xhr, reject) {
+  function parseFailure (xhr, options) {
+    /**
+    * Construct the rejection message before the interceptors can alter
+    * the xhr object.
+    */
+    var message
+
+    // If status is 0, consider the request cancelled
+    if (!xhr.status) {
+      message = options.method + ' ' + options.url + ' — request was cancelled'
+    // Otherwise make a full message
+    } else {
+      message = options.method + ' ' + options.url +
+                ' ' + xhr.status + ' (' + xhr.statusText + ')'
+    }
+
     /**
     * Apply error interceptors in order. Each interceptor is called with
     * the parsed response (if any) and the xhr object.
@@ -445,15 +460,15 @@ module.exports = function (promiseConstructor) {
       interceptor(response, xhr)
     })
 
-    // Reject the promise
-    reject(response)
+    // Return the rejection promise
+    return message
   }
 
   /**
-  * Success handler. Applies success interceptors and calls the given
-  * promise resolver.
+  * Success handler. Applies success interceptors and returns the response body
+  * to be passed to the resolver.
   */
-  function handleSuccess (xhr, resolve) {
+  function parseSuccess (xhr) {
     /**
     * Apply response interceptors in order. Each interceptor is called with
     * the parsed response and the native xhr object. If a non-undefined value is
@@ -467,8 +482,8 @@ module.exports = function (promiseConstructor) {
       if (result !== undefined) response = result
     })
 
-    // Forward the data to the user callback
-    resolve(response)
+    // Return the parsed response
+    return response
   }
 
   /********************************** xhttp **********************************/
@@ -511,17 +526,17 @@ module.exports = function (promiseConstructor) {
       // Assign primitive options
       utils.assign(xhr, options.$simpleOptions())
 
-      // Attach a failure listener
-      xhr.onabort = xhr.onerror = xhr.ontimeout = function() {
-        handleFailure(xhr, resolve)
+      // Attach failure listeners
+      xhr.onerror = xhr.onabort = xhr.ontimeout = function() {
+        reject(parseFailure(xhr, options))
       }
 
       // Attach a success listener
       xhr.onloadend = function() {
         if (successful(xhr)) {
-          handleSuccess(xhr, resolve)
+          resolve(parseSuccess(xhr))
         } else {
-          handleFailure(xhr, reject)
+          reject(parseFailure(xhr, options))
         }
       }
 

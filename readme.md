@@ -35,7 +35,7 @@ This will use an ES6 promise shim. You can also make your own version. Require `
 ```javascript
 var xhttp = require('xhttp/custom')(Promise)  // native or polyfill
 var xhttp = require('xhttp/custom')(require('q').Promise)
-var xhttp = require('xhttp/custom')(require('bluebird').Promise)
+var xhttp = require('xhttp/custom')(require('bluebird'))
 ```
 
 Any spec-compliant Promise implementation will do. This includes most popular promise libraries, so you don't have to worry about it.
