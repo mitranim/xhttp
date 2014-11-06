@@ -10,8 +10,8 @@
     "browser"
   ],
   "ignore": [
-    "./lib",
-    "./scripts"
+    "lib",
+    "scripts"
   ],
   "repository": {
     "type": "git",
