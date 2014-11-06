@@ -1,0 +1,12 @@
+{
+  "name": "xhttp",
+  "version": "0.0.1",
+  "description": "Lightweight ajax with pluggable ES6 promises and no mandatory dependencies.",
+  "author": "Mitranim",
+  "main": "./dist/xhttp.js",
+   "keywords": [
+    "ajax",
+    "promises",
+    "browser"
+  ]
+}

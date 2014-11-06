@@ -1,0 +1,23 @@
+{
+  "name": "xhttp",
+  "version": "0.0.1",
+  "description": "Lightweight ajax with pluggable ES6 promises and no mandatory dependencies.",
+  "author": "Mitranim",
+  "main": "./lib/index.js",
+  "scripts": {
+    "build": "./scripts/build.sh",
+    "prepublish": "npm run build"
+  },
+   "keywords": [
+    "ajax",
+    "promises",
+    "browser"
+  ],
+ "dependencies": {
+    "es6-promise": "latest"
+  },
+  "devDependencies": {
+    "browserify": "latest",
+    "uglify-js": "latest"
+  }
+}
