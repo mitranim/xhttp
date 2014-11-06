@@ -8,6 +8,10 @@
     "build": "./scripts/build.sh",
     "prepublish": "npm run build"
   },
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/Mitranim/xhttp.git"
+  },
    "keywords": [
     "ajax",
     "promises",
