@@ -11,13 +11,13 @@ For now, this targets the evergreen browsers and IE10-11. IE9 is planned. See th
 ## Installation
 
 ```bash
-npm install --save Mitranim/xhttp
+npm install --save xhttp
 ```
 
 Or for the global build:
 
 ```bash
-bower install --save Mitranim/xhttp
+bower install --save xhttp
 ```
 
 The bower version uses the pre-built file that exposes the global `window.xhttp`.
