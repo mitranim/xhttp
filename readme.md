@@ -47,7 +47,7 @@ Any spec-compliant Promise implementation will do. This includes most popular pr
 Format:
 
 ```javascript
-xhttp({options}) -> promise -> result
+xhttp({options}) → promise → result
 ```
 
 Example:
@@ -105,20 +105,21 @@ If the content type is json or form-encoded and the data is an object, it's auto
 A hash table of header names and values. xhttp includes them into the XMLHttpRequest.
 
 If headers don't include a `Content-Type` field, xhttp sets it automatically:
+
 1. Using `options.type`, if specified.
 2. Guessing based on data:
-  * data is an object -> `application/json; charset=utf-8`
-  * data is a string -> `text/plain; charset=utf-8`
+  * data is an object → `application/json; charset=utf-8`
+  * data is a string → `text/plain; charset=utf-8`
 
 #### `options.type`
 
 Shortcut to `options.headers['Content-Type']`. The available options are:
 
 ```javascript
-'plain'      ->  'text/plain; charset=utf-8'
-'json'       ->  'application/json; charset=utf-8'
-'form'       ->  'application/x-www-form-urlencoded; charset=utf-8'
-'multipart'  ->  'multipart/form-data'
+'plain'      →  'text/plain; charset=utf-8'
+'json'       →  'application/json; charset=utf-8'
+'form'       →  'application/x-www-form-urlencoded; charset=utf-8'
+'multipart'  →  'multipart/form-data'
 ```
 
 #### `options.timeout`
@@ -175,7 +176,7 @@ xhttp.addResInterceptor(function (data, status, jqXhr) {
   if (msg) {
     console.log('-- message from Santa:', msg)
   }
-  // returning undefined -> no change in data
+  // returning undefined → no change in data
   // returning any other value would replace data
 })
 ```
