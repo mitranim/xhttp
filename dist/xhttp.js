@@ -224,7 +224,7 @@ function deform (string) {
 * We can decode data sent as json or form-encoded.
 */
 function parse (xhr) {
-  var response    = xhr.response,
+  var response    = xhr.responseText,
       contentType = xhr.getResponseHeader('Content-Type')
 
   if (utils.typeRegs.json.test(contentType)) {
@@ -532,7 +532,7 @@ module.exports = function (promiseConstructor) {
       }
 
       // Attach a success listener
-      xhr.onloadend = function() {
+      xhr.onload = function() {
         if (successful(xhr)) {
           resolve(parseSuccess(xhr))
         } else {
