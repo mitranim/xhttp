@@ -54,7 +54,8 @@ Example:
 
 ```javascript
 xhttp({
-  url: 'my-backend-url'
+  url: 'my-backend-url',
+  method: 'post'
 })
 // Success handler
 .then(function (data) {
@@ -179,8 +180,8 @@ Adds a response interceptor or multiple.
 Example:
 
 ``` javascript
-xhttp.addResInterceptor(function (data, status, jqXhr) {
-  var msg = jqXhr.getResponseHeader('Easter-Egg')
+xhttp.addResInterceptor(function (data, xhr) {
+  var msg = xhr.getResponseHeader('Easter-Egg')
   if (msg) {
     console.log('-- message from Santa:', msg)
   }
@@ -196,8 +197,8 @@ Adds an error interceptor or multiple.
 Example:
 
 ``` javascript
-xhttp.addErrInterceptor(function (error, status, jqXhr) {
-  console.error(error)
+xhttp.addErrInterceptor(function (data, xhr) {
+  console.error(data)
   alert('Debug your flops')
 })
 ```
