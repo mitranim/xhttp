@@ -6,7 +6,7 @@ This is written with CommonJS modules and is expected to be used in a browserify
 
 By default, this uses [`es6-promise`](https://github.com/jakearchibald/es6-promise), but you can supply a promise constructor of your own (see below). When using this style, `es6-promise` won't be included into your build.
 
-For now, this targets the evergreen browsers and IE10-11. IE9 is planned. See the ToDo section.
+Works in evergreen browsers and IE9-11. See the ToDo section.
 
 ## Installation
 
@@ -210,7 +210,6 @@ Be aware that CommonJS doesn't guarantee modules to be unique. Depending on your
 ## ToDo / WIP
 
 * Cross-origin requests
-* IE9
 * Check if we need to support more data types
 * Support upload progress events
 * Tests
