@@ -396,6 +396,73 @@ var Options = require('./options'),
     utils   = require('./utils'),
     parse   = require('./parse')
 
+/********************************* Utilities *********************************/
+
+/**
+* Checks if an xhr is successful. It's considered a success if the status
+* is between 200 and 299, inclusively.
+*/
+function successful (xhr) {
+  return xhr.status >= 200 && xhr.status <= 299
+}
+
+/**
+* Failure handler. Applies error interceptors and returns a rejection reason
+* based on the given xhr and options.
+*/
+function parseFailure (xhr, options) {
+  /**
+  * Construct the rejection message before the interceptors can alter
+  * the xhr object.
+  */
+  var message
+
+  // If status is 0, consider the request cancelled
+  if (!xhr.status) {
+    message = options.method + ' ' + options.url + ' — request was cancelled'
+  // Otherwise make a full message
+  } else {
+    message = options.method + ' ' + options.url +
+              ' ' + xhr.status + ' (' + xhr.statusText + ')'
+  }
+
+  /**
+  * Apply error interceptors in order. Each interceptor is called with
+  * the parsed response (if any) and the xhr object.
+  */
+
+  var response = parse(xhr)
+
+  xhttp.errInterceptors.forEach(function (interceptor) {
+    interceptor(response, xhr)
+  })
+
+  // Return the rejection reason
+  return message
+}
+
+/**
+* Success handler. Applies success interceptors and returns the response body
+* to be passed to the resolver.
+*/
+function parseSuccess (xhr) {
+  /**
+  * Apply response interceptors in order. Each interceptor is called with
+  * the parsed response and the native xhr object. If a non-undefined value is
+  * returned, it replaces the parsed data object for all subsequent callbacks.
+  */
+
+  var response = parse(xhr)
+
+  xhttp.resInterceptors.forEach(function (interceptor) {
+    var result = interceptor(response, xhr)
+    if (result !== undefined) response = result
+  })
+
+  // Return the parsed response
+  return response
+}
+
 /**************************** Generator / Export *****************************/
 
 /**
@@ -417,73 +484,6 @@ module.exports = function (promiseConstructor) {
   */
   if (!isPromise) {
     throw new Error('the argument must be a promise constructor')
-  }
-
-  /******************************** Utilities ********************************/
-
-  /**
-  * Checks if an xhr is successful. It's considered a success if the status
-  * is between 200 and 299, inclusively.
-  */
-  function successful (xhr) {
-    return xhr.status >= 200 && xhr.status <= 299
-  }
-
-  /**
-  * Failure handler. Applies error interceptors and returns a rejection reason
-  * based on the given xhr and options.
-  */
-  function parseFailure (xhr, options) {
-    /**
-    * Construct the rejection message before the interceptors can alter
-    * the xhr object.
-    */
-    var message
-
-    // If status is 0, consider the request cancelled
-    if (!xhr.status) {
-      message = options.method + ' ' + options.url + ' — request was cancelled'
-    // Otherwise make a full message
-    } else {
-      message = options.method + ' ' + options.url +
-                ' ' + xhr.status + ' (' + xhr.statusText + ')'
-    }
-
-    /**
-    * Apply error interceptors in order. Each interceptor is called with
-    * the parsed response (if any) and the xhr object.
-    */
-
-    var response = parse(xhr)
-
-    xhttp.errInterceptors.forEach(function (interceptor) {
-      interceptor(response, xhr)
-    })
-
-    // Return the rejection promise
-    return message
-  }
-
-  /**
-  * Success handler. Applies success interceptors and returns the response body
-  * to be passed to the resolver.
-  */
-  function parseSuccess (xhr) {
-    /**
-    * Apply response interceptors in order. Each interceptor is called with
-    * the parsed response and the native xhr object. If a non-undefined value is
-    * returned, it replaces the parsed data object for all subsequent callbacks.
-    */
-
-    var response = parse(xhr)
-
-    xhttp.resInterceptors.forEach(function (interceptor) {
-      var result = interceptor(response, xhr)
-      if (result !== undefined) response = result
-    })
-
-    // Return the parsed response
-    return response
   }
 
   /********************************** xhttp **********************************/
