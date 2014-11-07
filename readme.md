@@ -126,6 +126,14 @@ Shortcut to `options.headers['Content-Type']`. The available options are:
 
 Request timeout in milliseconds. The default is `10000`.
 
+#### `options.username`
+
+Username to send for authentication.
+
+#### `options.password`
+
+Password to send for authentication.
+
 #### `options.withCredentials`
 
 Determines whether to send cookies and auth headers in cross-domain requests. See the XMLHttpRequest [reference](https://developer.mozilla.org/en-US/docs/Web/API/XMLHttpRequest#Properties). The default is `false`.
