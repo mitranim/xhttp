@@ -101,6 +101,8 @@ The body of your request. If it's not a string, xhttp attempts to automatically 
 
 If the content type is json or form-encoded and the data is an object, it's automatically converted to a json-encoded or form-encoded string. Otherwise the data is sent as-is.
 
+Set `options.processData` to `false` to disable automatic conversion. Relevant when sending objects with special ajax behaviour, like instances of `FormData` or `Blob`.
+
 #### `options.headers`
 
 A hash table of header names and values. xhttp includes them into the XMLHttpRequest.
@@ -120,8 +122,9 @@ Shortcut to `options.headers['Content-Type']`. The available options are:
 'plain'      →  'text/plain; charset=utf-8'
 'json'       →  'application/json; charset=utf-8'
 'form'       →  'application/x-www-form-urlencoded; charset=utf-8'
-'multipart'  →  'multipart/form-data'
 ```
+
+Ignored if `options.contentType` is set to `false`.
 
 #### `options.timeout`
 
@@ -138,6 +141,14 @@ Password to send for authentication.
 #### `options.withCredentials`
 
 Determines whether to send cookies and auth headers in cross-domain requests. See the XMLHttpRequest [reference](https://developer.mozilla.org/en-US/docs/Web/API/XMLHttpRequest#Properties). The default is `false`.
+
+#### `options.contentType`
+
+Set to `false` to disable automatic detection of `options.headers['Content-Type']` and ignore `options.type`. Relevant when sending objects with special ajax behaviour, like `FormData` or `Blob`.
+
+#### `options.processData`
+
+Set to `false` to disable automatic conversion of request body based on `options.headers['Content-Type']`. Relevant when sending objects with special ajax behaviour, like `FormData` or `Blob`.
 
 ### Interceptors
 
@@ -209,7 +220,6 @@ Be aware that CommonJS doesn't guarantee modules to be unique. Depending on your
 
 ## ToDo / WIP
 
-* Cross-origin requests
-* Check if we need to support more data types
 * Support upload progress events
 * Tests
+* Check if we need to support responseXML

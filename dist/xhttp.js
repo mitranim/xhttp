@@ -58,11 +58,15 @@ function Options (attributes) {
   // Assign attributes to self
   utils.assign(this, attributes)
 
-  // Parse own properties
-  this.$method()
-  this.$url()
-  this.$headers()
-  this.$data()
+  /** Parse own properties */
+  // Adjust the HTTP method
+  this.$parseMethod()
+  // Adjust the URL
+  this.$parseUrl()
+  // Adjust headers and detect content type
+  this.$parseHeaders()
+  // Adjust data depending on content type
+  this.$parseData()
 }
 
 /********************************* Prototype *********************************/
@@ -71,7 +75,7 @@ function Options (attributes) {
 * Figures out the HTTP method. It must be a string, we uppercase it to match
 * the spec, and the default is GET.
 */
-Options.prototype.$method = function() {
+Options.prototype.$parseMethod = function() {
   // Old method value
   var value = this.method
 
@@ -82,7 +86,7 @@ Options.prototype.$method = function() {
 /**
 * Figures out the URL based on the provided base string and parameters.
 */
-Options.prototype.$url = function() {
+Options.prototype.$parseUrl = function() {
   // Mandate some kind of string URL provided
   if (typeof this.url !== 'string' || !this.url) {
     throw new Error('an URL string is required')
@@ -104,9 +108,13 @@ Options.prototype.$makeParams = function() {
 /**
 * Adjusts `options.headers`. Makes sure it's a hash, clones for safety, and
 * sets the content type if relevant and possible.
+* Has no effect if `options.contentType` is set to false.
 */
-Options.prototype.$headers = function() {
+Options.prototype.$parseHeaders = function() {
   this.headers = utils.toHash(this.headers)
+
+  // Quit if automatic content-type is disabled
+  if (this.contentType != null && !this.contentType) return
 
   if (!this.headers['Content-Type']) {
     var type = utils.types[this.type] || this.$guessContentType()
@@ -132,8 +140,10 @@ Options.prototype.$guessContentType = function() {
 * Adjusts `this.data`. If we're using a no-body method, it's deleted from the
 * options. If it's not a string and we know how to convert it, it's converted.
 * Otherwise it's left unchanged.
+* Has no effect if `options.processData` is set to false.
 */
-Options.prototype.$data = function() {
+Options.prototype.$parseData = function() {
+  if (this.processData != null && !this.processData) return
   if (!this.hasOwnProperty('data')) return
 
   // Using a no-body method -> no need to have a body
@@ -161,7 +171,7 @@ Options.prototype.$data = function() {
 }
 
 /**
-* Checks if we're using a method that doesn't send request body.
+* Checks if we're using a method that doesn't send a request body.
 */
 Options.prototype.$noBody = function() {
   return this.method === 'GET' || this.method === 'OPTIONS'
@@ -252,6 +262,26 @@ module.exports = parse
 /**************************** Utilities / Export *****************************/
 
 /**
+* Table to map options.type to options.headers['Content-Type'].
+*/
+var types = {
+  'plain'     : 'text/plain; charset=utf-8',
+  'json'      : 'application/json; charset=utf-8',
+  'form'      : 'application/x-www-form-urlencoded; charset=utf-8'
+}
+exports.types = types
+
+/**
+* Content-type checker regexes.
+*/
+var typeRegs = {
+  'plain'     : /text\/plain/i,
+  'json'      : /application\/json/i,
+  'form'      : /application\/x-www-form-urlencoded/i
+}
+exports.typeRegs = typeRegs
+
+/**
 * Checks if something is an object, as in, you can read properties from it
 * and set properties to it.
 */
@@ -279,15 +309,16 @@ function propEnum (object, key) {
 exports.propEnum = propEnum
 
 /**
-* Loops over an object, calling the callback on each value with own execution
-* context. Call this function with .call or .apply to use a different
-* execution context.
+* Loops over own enumerable properties of an object, calling the callback on
+* each value with own execution context. Call this function with .call or
+* .apply to use a different execution context.
 */
 function forOwn (object, callback) {
   if (!isObject(object)) return
 
   for (var key in object) {
     if (!ownProp(object, key)) continue
+    if (!propEnum(object, key)) continue
 
     callback.call(this, object[key], key)
   }
@@ -303,12 +334,9 @@ function assign (target, source) {
   if (!isObject(target)) target = {}
   if (!isObject(source)) return target
 
-  for (var key in source) {
-    if (!ownProp(source, key)) continue
-    if (!propEnum(source, key)) continue
-
-    target[key] = source[key]
-  }
+  forOwn(source, function (value, key) {
+    target[key] = value
+  })
 
   return target
 }
@@ -347,28 +375,6 @@ function formEncode (object) {
   return result.join('&')
 }
 exports.formEncode = formEncode
-
-/**
-* Table to map options.type to options.headers['Content-Type'].
-*/
-var types = {
-  'plain'     : 'text/plain; charset=utf-8',
-  'json'      : 'application/json; charset=utf-8',
-  'form'      : 'application/x-www-form-urlencoded; charset=utf-8',
-  'multipart' : 'multipart/form-data'
-}
-exports.types = types
-
-/**
-* Content-type checker regexes.
-*/
-var typeRegs = {
-  'plain'     : /text\/plain/i,
-  'json'      : /application\/json/i,
-  'form'      : /application\/x-www-form-urlencoded/i,
-  'multipart' : /multipart\/form-data/i
-}
-exports.typeRegs = typeRegs
 
 },{}],5:[function(require,module,exports){
 'use strict'
