@@ -282,11 +282,11 @@ var typeRegs = {
 exports.typeRegs = typeRegs
 
 /**
-* Checks if something is an object, as in, you can read properties from it
+* Checks if something is an object. As in, you can read properties from it
 * and set properties to it.
 */
 function isObject (value) {
-  return !!value && typeof value === 'object'
+  return value !== null && typeof value === 'object'
 }
 exports.isObject = isObject
 
@@ -300,15 +300,6 @@ function ownProp (object, key) {
 exports.ownProp = ownProp
 
 /**
-* `propertyIsEnumerable` that works for objects that don't have this method.
-* (E.g. hash tables created with Object.create(null).)
-*/
-function propEnum (object, key) {
-  return Object.propertyIsEnumerable.call(object, key)
-}
-exports.propEnum = propEnum
-
-/**
 * Loops over own enumerable properties of an object, calling the callback on
 * each value with own execution context. Call this function with .call or
 * .apply to use a different execution context.
@@ -318,7 +309,6 @@ function forOwn (object, callback) {
 
   for (var key in object) {
     if (!ownProp(object, key)) continue
-    if (!propEnum(object, key)) continue
 
     callback.call(this, object[key], key)
   }
