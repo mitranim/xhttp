@@ -426,54 +426,21 @@ module.exports = function (promiseConstructor) {
   }
 
   /**
-  * Failure handler. Applies error interceptors and returns a rejection reason
-  * based on the given xhr and options.
+  * Response handler. Applies success or failure interceptors and returns the
+  * response body to be passed to the resolver.
   */
-  function parseFailure (xhr, options) {
+  function parseResponse (xhr, success) {
     /**
-    * Construct the rejection message before the interceptors can alter
-    * the xhr object.
-    */
-    var message
-
-    // If status is 0, consider the request cancelled
-    if (!xhr.status) {
-      message = options.method + ' ' + options.url + ' — request was cancelled'
-    // Otherwise make a full message
-    } else {
-      message = options.method + ' ' + options.url +
-                ' ' + xhr.status + ' (' + xhr.statusText + ')'
-    }
-
-    /**
-    * Apply error interceptors in order. Each interceptor is called with
-    * the parsed response (if any) and the xhr object.
+    * Apply interceptors in order. Each interceptor is called with the parsed
+    * response and the native xhr object. If a non-undefined value is returned,
+    * it replaces the parsed data object for all subsequent callbacks.
     */
 
     var response = parse(xhr)
 
-    xhttp.errInterceptors.forEach(function (interceptor) {
-      interceptor(response, xhr)
-    })
+    var interceptors = success ? xhttp.resInterceptors : xhttp.errInterceptors
 
-    // Return the rejection reason
-    return message
-  }
-
-  /**
-  * Success handler. Applies success interceptors and returns the response body
-  * to be passed to the resolver.
-  */
-  function parseSuccess (xhr) {
-    /**
-    * Apply response interceptors in order. Each interceptor is called with
-    * the parsed response and the native xhr object. If a non-undefined value is
-    * returned, it replaces the parsed data object for all subsequent callbacks.
-    */
-
-    var response = parse(xhr)
-
-    xhttp.resInterceptors.forEach(function (interceptor) {
+    interceptors.forEach(function (interceptor) {
       var result = interceptor(response, xhr)
       if (result !== undefined) response = result
     })
@@ -524,15 +491,15 @@ module.exports = function (promiseConstructor) {
 
       // Attach failure listeners
       xhr.onerror = xhr.onabort = xhr.ontimeout = function() {
-        reject(parseFailure(xhr, options))
+        reject(parseResponse(xhr))
       }
 
       // Attach a success listener
       xhr.onload = function() {
         if (successful(xhr)) {
-          resolve(parseSuccess(xhr))
+          resolve(parseResponse(xhr, true))
         } else {
-          reject(parseFailure(xhr, options))
+          reject(parseResponse(xhr))
         }
       }
 
