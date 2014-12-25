@@ -2,10 +2,10 @@
 'use strict'
 
 /**
-* Default version of xhttp. Uses an ES6 promise shim.
-*
-* The user can supply a custom promise constructor, see notes in `xhttp.js`.
-*/
+ * Default version of xhttp. Uses an ES6 promise shim.
+ *
+ * The user can supply a custom promise constructor, see notes in `xhttp.js`.
+ */
 
 /******************************* Dependencies ********************************/
 
@@ -23,8 +23,8 @@ module.exports = xhttp(Promise)
 'use strict'
 
 /**
-* Parses the options for an xhttp request.
-*/
+ * Parses the options for an xhttp request.
+ */
 
 /******************************* Dependencies ********************************/
 
@@ -34,13 +34,13 @@ var utils = require('./utils')
 /********************************** Globals **********************************/
 
 /**
-* List of keys that can be assigned from options to xhr directly.
-*/
+ * List of keys that can be assigned from options to xhr directly.
+ */
 var simpleOptions = ['timeout', 'withCredentials']
 
 /**
-* Default options.
-*/
+ * Default options.
+ */
 var defaults = {
   timeout: 10000,
   withCredentials: false
@@ -48,6 +48,9 @@ var defaults = {
 
 /******************************** Constructor ********************************/
 
+/**
+ * The options class. Parses the given options hash on initialisation.
+ */
 function Options (attributes) {
   // Make sure attributes are an object
   attributes = utils.toHash(attributes)
@@ -59,12 +62,16 @@ function Options (attributes) {
   utils.assign(this, attributes)
 
   /** Parse own properties */
+
   // Adjust the HTTP method
   this.$parseMethod()
+
   // Adjust the URL
   this.$parseUrl()
+
   // Adjust headers and detect content type
   this.$parseHeaders()
+
   // Adjust data depending on content type
   this.$parseData()
 }
@@ -72,9 +79,9 @@ function Options (attributes) {
 /********************************* Prototype *********************************/
 
 /**
-* Figures out the HTTP method. It must be a string, we uppercase it to match
-* the spec, and the default is GET.
-*/
+ * Figures out the HTTP method. It must be a string, we uppercase it to match
+ * the spec, and the default is GET.
+ */
 Options.prototype.$parseMethod = function() {
   // Old method value
   var value = this.method
@@ -84,8 +91,8 @@ Options.prototype.$parseMethod = function() {
 }
 
 /**
-* Figures out the URL based on the provided base string and parameters.
-*/
+ * Figures out the URL based on the provided base string and parameters.
+ */
 Options.prototype.$parseUrl = function() {
   // Mandate some kind of string URL provided
   if (typeof this.url !== 'string' || !this.url) {
@@ -97,8 +104,8 @@ Options.prototype.$parseUrl = function() {
 }
 
 /**
-* Returns a query string made of own params.
-*/
+ * Returns a query string made of own params.
+ */
 Options.prototype.$makeParams = function() {
   var query = utils.formEncode(this.params)
   if (query) query = '?' + query
@@ -106,10 +113,10 @@ Options.prototype.$makeParams = function() {
 }
 
 /**
-* Adjusts `options.headers`. Makes sure it's a hash, clones for safety, and
-* sets the content type if relevant and possible.
-* Has no effect if `options.contentType` is set to false.
-*/
+ * Adjusts `options.headers`. Makes sure it's a hash, clones for safety, and
+ * sets the content type if relevant and possible. Has no effect if
+ * `options.contentType` is set to false.
+ */
 Options.prototype.$parseHeaders = function() {
   this.headers = utils.toHash(this.headers)
 
@@ -125,9 +132,9 @@ Options.prototype.$parseHeaders = function() {
 }
 
 /**
-* Tries to guess the content-type based on the data. If data is an object,
-* this defaults to application/json.
-*/
+ * Tries to guess the content-type based on the data. If data is an object,
+ * this defaults to application/json.
+ */
 Options.prototype.$guessContentType = function() {
   if (!this.hasOwnProperty('data')) return
 
@@ -137,11 +144,11 @@ Options.prototype.$guessContentType = function() {
 }
 
 /**
-* Adjusts `this.data`. If we're using a no-body method, it's deleted from the
-* options. If it's not a string and we know how to convert it, it's converted.
-* Otherwise it's left unchanged.
-* Has no effect if `options.processData` is set to false.
-*/
+ * Adjusts `this.data`. If we're using a no-body method, it's deleted from the
+ * options. If it's not a string and we know how to convert it, it's converted.
+ * Otherwise it's left unchanged. Has no effect if `options.processData` is set
+ * to false.
+ */
 Options.prototype.$parseData = function() {
   if (this.processData != null && !this.processData) return
   if (!this.hasOwnProperty('data')) return
@@ -171,16 +178,16 @@ Options.prototype.$parseData = function() {
 }
 
 /**
-* Checks if we're using a method that doesn't send a request body.
-*/
+ * Checks if we're using a method that doesn't send a request body.
+ */
 Options.prototype.$noBody = function() {
   return this.method === 'GET' || this.method === 'OPTIONS'
 }
 
 /**
-* Returns a hash of own properties that correspond to writable properties
-* of the xhr object and can be directly assigned to it.
-*/
+ * Returns a hash of own properties that correspond to writable properties of
+ * the xhr object and can be directly assigned to it.
+ */
 Options.prototype.$simpleOptions = function() {
   var buffer = {}
 
@@ -200,8 +207,8 @@ module.exports = Options
 'use strict'
 
 /**
-* Returns the response data of an xhr request.
-*/
+ * Returns the response data of an xhr request.
+ */
 
 /******************************* Dependencies ********************************/
 
@@ -211,8 +218,8 @@ var utils = require('./utils')
 /********************************* Utilities *********************************/
 
 /**
-* Converts a form-encoded string into a hash.
-*/
+ * Converts a form-encoded string into a hash.
+ */
 function deform (string) {
   var buffer = {},
       pair, key, value
@@ -230,9 +237,9 @@ function deform (string) {
 }
 
 /**
-* Tries to decode the data of an xhr request based on its content-type header.
-* We can decode data sent as json or form-encoded.
-*/
+ * Tries to decode the data of an xhr request based on its content-type header.
+ * We can decode data sent as json or form-encoded.
+ */
 function parse (xhr) {
   var response    = xhr.responseText,
       contentType = xhr.getResponseHeader('Content-Type')
@@ -256,14 +263,14 @@ module.exports = parse
 'use strict'
 
 /**
-* Utils for other xhttp modules.
-*/
+ * Utils for other xhttp modules.
+ */
 
 /**************************** Utilities / Export *****************************/
 
 /**
-* Table to map options.type to options.headers['Content-Type'].
-*/
+ * Table to map options.type to options.headers['Content-Type'].
+ */
 var types = {
   'plain'     : 'text/plain; charset=utf-8',
   'json'      : 'application/json; charset=utf-8',
@@ -272,8 +279,8 @@ var types = {
 exports.types = types
 
 /**
-* Content-type checker regexes.
-*/
+ * Content-type checker regexes.
+ */
 var typeRegs = {
   'plain'     : /text\/plain/i,
   'json'      : /application\/json/i,
@@ -282,28 +289,28 @@ var typeRegs = {
 exports.typeRegs = typeRegs
 
 /**
-* Checks if something is an object. As in, you can read properties from it
-* and set properties to it.
-*/
+ * Checks if something is an object. As in, you can read properties from it and
+ * set properties to it.
+ */
 function isObject (value) {
   return value !== null && typeof value === 'object'
 }
 exports.isObject = isObject
 
 /**
-* `hasOwnProperty` that works for objects that don't have this method.
-* (E.g. hash tables created with Object.create(null).)
-*/
+ * `hasOwnProperty` that works for objects that don't have this method, like
+ * hash tables created with Object.create(null)
+ */
 function ownProp (object, key) {
   return Object.hasOwnProperty.call(object, key)
 }
 exports.ownProp = ownProp
 
 /**
-* Loops over own enumerable properties of an object, calling the callback on
-* each value with own execution context. Call this function with .call or
-* .apply to use a different execution context.
-*/
+ * Loops over own enumerable properties of an object, calling the callback on
+ * each value with own execution context. Call this function with .call or
+ * .apply to use a different execution context.
+ */
 function forOwn (object, callback) {
   if (!isObject(object)) return
 
@@ -316,10 +323,10 @@ function forOwn (object, callback) {
 exports.forOwn = forOwn
 
 /**
-* Assigns own enumerable properties of the given source object to the given
-* target object. If the target is not an object, a new empty object is used
-* in its place. Returns the target object.
-*/
+ * Assigns own enumerable properties of the given source object to the given
+ * target object. If the target is not an object, a new empty object is used in
+ * its place. Returns the target object.
+ */
 function assign (target, source) {
   if (!isObject(target)) target = {}
   if (!isObject(source)) return target
@@ -333,8 +340,8 @@ function assign (target, source) {
 exports.assign = assign
 
 /**
-* Makes sure value is an object and makes a shallow clone.
-*/
+ * Makes sure value is an object and makes a shallow clone.
+ */
 function toHash (object) {
   if (!isObject(object)) return {}
 
@@ -349,10 +356,10 @@ function toHash (object) {
 exports.toHash = toHash
 
 /**
-* Converts a given hash into a query string. Ignores non-truthy values (except
-* zero) and non-truthy keys like ''. Useable for URLs or form-encoded URL
-* bodies. Always returns a string.
-*/
+ * Converts a given hash into a query string. Ignores non-truthy values (except
+ * zero) and non-truthy keys like ''. Useable for URLs or form-encoded URL
+ * bodies. Always returns a string.
+ */
 function formEncode (object) {
   var result = []
 
@@ -370,47 +377,43 @@ exports.formEncode = formEncode
 'use strict'
 
 /**
-* Basic ajax utility. Does "low"-level browser ajax with ES6 promises
-* and provides a primitive API for request / response / error interceptors.
-*
-* Expects a CommonJS environment. Doesn't depend on jQuery.
-*
-* By default, the library uses an ES6-promise shim, but you can use any
-* spec-compliant Promise constructor by directly requiring this file and
-* calling the exported function with your constructor. Examples:
-*
-*   var xhttp = require('xhttp')
-*   var xhttp = require('xhttp/custom')(Promise)
-*   var xhttp = require('xhttp/custom')(require('q').Promise)
-*   var xhttp = require('xhttp/custom')(require('bluebird'))
-*/
+ * Basic ajax utility. Does "low"-level browser ajax with ES6 promises and
+ * provides a primitive API for request / response / error interceptors.
+ *
+ * Expects a CommonJS environment. Doesn't depend on jQuery.
+ *
+ * By default, the library uses an ES6-promise shim, but you can use any
+ * spec-compliant Promise constructor by directly requiring this file and
+ * calling the exported function with your constructor. Examples:
+ *
+ *   var xhttp = require('xhttp')
+ *   var xhttp = require('xhttp/custom')(Promise)
+ *   var xhttp = require('xhttp/custom')(require('q').Promise)
+ *   var xhttp = require('xhttp/custom')(require('bluebird'))
+ */
 
 /******************************* Dependencies ********************************/
 
 // Custom components
-var Options = require('./options'),
-    utils   = require('./utils'),
-    parse   = require('./parse')
+var Options = require('./options')
+var utils   = require('./utils')
+var parse   = require('./parse')
 
 /**************************** Generator / Export *****************************/
 
 /**
-* We export a function that takes a promise constructor and generates an
-* xhttp function using it.
-*/
+ * Export a function that takes a promise constructor and generates a version
+ * of xhttp using it.
+ */
 
 module.exports = function (promiseConstructor) {
 
-  /**
-  * Check if the constructor has the methods we need.
-  */
+  // Check if the constructor has the methods we need
   var isPromise = typeof promiseConstructor === 'function' &&
-                  typeof promiseConstructor.prototype.then === 'function' &&
+                  typeof promiseConstructor.prototype.then  === 'function' &&
                   typeof promiseConstructor.prototype.catch === 'function'
 
-  /**
-  * Throw an error if we didn't get a constructor with the required methods.
-  */
+  // Throw an error if we didn't get a constructor with the required methods
   if (!isPromise) {
     throw new Error('the argument must be a promise constructor')
   }
@@ -418,23 +421,24 @@ module.exports = function (promiseConstructor) {
   /******************************** Utilities ********************************/
 
   /**
-  * Checks if an xhr is successful. It's considered a success if the status
-  * is between 200 and 299, inclusively.
-  */
+   * Checks if an xhr is successful. It's considered a success if the status is
+   * between 200 and 299, inclusively.
+   */
   function successful (xhr) {
     return xhr.status >= 200 && xhr.status <= 299
   }
 
   /**
-  * Response handler. Applies success or failure interceptors and returns the
-  * response body to be passed to the resolver.
-  */
+   * Response handler. Applies success or failure interceptors and returns the
+   * response body to be passed to the resolver.
+   */
   function parseResponse (xhr, success) {
     /**
-    * Apply interceptors in order. Each interceptor is called with the parsed
-    * response and the native xhr object. If a non-undefined value is returned,
-    * it replaces the parsed data object for all subsequent callbacks.
-    */
+     * Apply interceptors in order. Each interceptor is called with the parsed
+     * response and the native xhr object. If a non-undefined value is
+     * returned, it replaces the parsed data object for all subsequent
+     * callbacks.
+     */
 
     var response = parse(xhr)
 
@@ -470,10 +474,10 @@ module.exports = function (promiseConstructor) {
       )
 
       /**
-      * Apply request interceptors in order. Each interceptor is called with
-      * one argument: the `data` attribute of the options object. If a
-      * non-undefined value is returned, it replaces the data attribute.
-      */
+       * Apply request interceptors in order. Each interceptor is called with
+       * one argument: the `data` attribute of the options object. If a
+       * non-undefined value is returned, it replaces the data attribute.
+       */
       if (!options.$noBody()) {
         xhttp.reqInterceptors.forEach(function (interceptor) {
           var result = interceptor(options.data)
@@ -511,23 +515,24 @@ module.exports = function (promiseConstructor) {
   /****************************** Interceptors *******************************/
 
   /**
-  * `xhttp` has three groups of interceptors:
-  *   reqInterceptors
-  *   resInterceptors
-  *   errInterceptors
-  *
-  * Request interceptors are called with `(data)`, where data is the data passed
-  * in the xhttp config object supplied by the user. If an interceptor returns
-  * a non-undefined value, the value replaces the data. If the request method
-  * implies no body (like GET), request interceptors are ignored.
-  *
-  * Success interceptors are called with `(data, xhr)`, where data is the parsed
-  * response and xhr is the native XMLHttpRequest object. Like with request
-  * interceptors, they can replace the data by returning a non-undefined value.
-  *
-  * Error interceptors are called with the same arguments as success interceptors,
-  * but no argument substitution is made.
-  */
+   * `xhttp` has three groups of interceptors:
+   *   reqInterceptors
+   *   resInterceptors
+   *   errInterceptors
+   *
+   * Request interceptors are called with `(data)`, where data is the data
+   * passed in the xhttp config object supplied by the user. If an interceptor
+   * returns a non-undefined value, the value replaces the data. If the request
+   * method implies no body (like GET), request interceptors are ignored.
+   *
+   * Success interceptors are called with `(data, xhr)`, where data is the
+   * parsed response and xhr is the native XMLHttpRequest object. Like with
+   * request interceptors, they can replace the data by returning a
+   * non-undefined value.
+   *
+   * Error interceptors are called with the same arguments as success
+   * interceptors, but no argument substitution is made.
+   */
 
   xhttp.reqInterceptors = []
 
