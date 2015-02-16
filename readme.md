@@ -192,7 +192,7 @@ xhttp.addResInterceptor(function (data, xhr) {
   if (msg) {
     console.log('-- message from Santa:', msg)
   }
-  // returning undefined → no change in data
+  // returning `undefined` → no change in data
   // returning any other value would replace data
 })
 ```
@@ -207,14 +207,14 @@ Example:
 xhttp.addErrInterceptor(function (data, xhr) {
   console.error(data)
   alert('Debug your flops')
-  // returning undefined → no change in data
+  // returning `undefined` → no change in data
   // returning any other value would replace data
 })
 ```
 
 ## Uniqueness
 
-Be aware that CommonJS doesn't guarantee modules to be unique. Depending on your dependency tree, it's possible for your modules to receive a different instance of xhttp than a third party library that depends on xhttp (e.g. [Record](https://github.com/Mitranim/record)). In this case, custom interceptors defined in your files won't affect ajax calls made by that library. One solution is to expose the xhttp object in each library that depends on it, and in the user scripts, check for xhttp object equality and apply the same set of interceptors to each instance.
+Be aware that CommonJS doesn't guarantee modules to be unique. Depending on your dependency tree, it's possible for your modules to receive a different instance of xhttp than a third party library that depends on xhttp (e.g. [Datacore](https://github.com/Mitranim/datacore)). In this case, custom interceptors defined in your files won't affect ajax calls made by that library. One solution is to expose the xhttp object in each library that depends on it, and in the user scripts, check for xhttp object equality and apply the same set of interceptors to each instance.
 
 ## ToDo / WIP
 
