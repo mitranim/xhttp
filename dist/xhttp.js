@@ -429,20 +429,33 @@ module.exports = function (promiseConstructor) {
   }
 
   /**
-   * Response handler. Applies success or failure interceptors and returns the
-   * response body to be passed to the resolver.
+   * Response handler. Parses the response, applies the given set of
+   * interceptors, and returns the resulting response value that will be
+   * passed to the resolver.
    */
-  function parseResponse (xhr, success) {
+  function parseResponse (xhr, interceptors) {
     /**
-     * Apply interceptors in order. Each interceptor is called with the parsed
-     * response and the native xhr object. If a non-undefined value is
-     * returned, it replaces the parsed data object for all subsequent
-     * callbacks.
+     * Special case for response status 204: the xhr response body isn't parsed,
+     * isn't passed to interceptors, and interceptor return values are ignored.
+     * See http://www.w3.org/Protocols/rfc2616/rfc2616-sec10.html#sec10.2.5
+     */
+
+    if (xhr.status === 204) {
+      interceptors.forEach(function (interceptor) {
+        interceptor(null, xhr)
+      })
+      return null
+    }
+
+    /**
+     * Standard case: the response is parsed in accordance with the xhr
+     * options and content headers, then the interceptors are applied in
+     * order. Each interceptor is called with the parsed response and the
+     * native xhr object. If a non-undefined value is returned, it replaces
+     * the response value for all subsequent callbacks.
      */
 
     var response = parse(xhr)
-
-    var interceptors = success ? xhttp.resInterceptors : xhttp.errInterceptors
 
     interceptors.forEach(function (interceptor) {
       var result = interceptor(response, xhr)
@@ -501,9 +514,9 @@ module.exports = function (promiseConstructor) {
       // Attach a success listener
       xhr.onload = function() {
         if (successful(xhr)) {
-          resolve(parseResponse(xhr, true))
+          resolve(parseResponse(xhr, xhttp.resInterceptors))
         } else {
-          reject(parseResponse(xhr))
+          reject(parseResponse(xhr, xhttp.errInterceptors))
         }
       }
 
@@ -525,13 +538,10 @@ module.exports = function (promiseConstructor) {
    * returns a non-undefined value, the value replaces the data. If the request
    * method implies no body (like GET), request interceptors are ignored.
    *
-   * Success interceptors are called with `(data, xhr)`, where data is the
-   * parsed response and xhr is the native XMLHttpRequest object. Like with
-   * request interceptors, they can replace the data by returning a
+   * Success and error interceptors are called with `(data, xhr)`, where data
+   * is the parsed response and xhr is the native XMLHttpRequest object. Like
+   * with request interceptors, they can replace the data by returning a
    * non-undefined value.
-   *
-   * Error interceptors are called with the same arguments as success
-   * interceptors, but no argument substitution is made.
    */
 
   xhttp.reqInterceptors = []
@@ -653,7 +663,7 @@ process.chdir = function (dir) {
  * @copyright Copyright (c) 2014 Yehuda Katz, Tom Dale, Stefan Penner and contributors (Conversion to ES6 API by Jake Archibald)
  * @license   Licensed under MIT license
  *            See https://raw.githubusercontent.com/jakearchibald/es6-promise/master/LICENSE
- * @version   2.0.0
+ * @version   2.0.1
  */
 
 (function() {
@@ -1284,13 +1294,11 @@ process.chdir = function (dir) {
 
       @class Promise
       @param {function} resolver
-      @param {String} label optional string for labeling the promise.
       Useful for tooling.
       @constructor
     */
-    function $$es6$promise$promise$$Promise(resolver, label) {
+    function $$es6$promise$promise$$Promise(resolver) {
       this._id = $$es6$promise$promise$$counter++;
-      this._label = label;
       this._state = undefined;
       this._result = undefined;
       this._subscribers = [];
@@ -1506,11 +1514,10 @@ process.chdir = function (dir) {
       @method then
       @param {Function} onFulfilled
       @param {Function} onRejected
-      @param {String} label optional string for labeling the promise.
       Useful for tooling.
       @return {Promise}
     */
-      then: function(onFulfillment, onRejection, label) {
+      then: function(onFulfillment, onRejection) {
         var parent = this;
         var state = parent._state;
 
@@ -1518,9 +1525,7 @@ process.chdir = function (dir) {
           return this;
         }
 
-        parent._onerror = null;
-
-        var child = new this.constructor($$$internal$$noop, label);
+        var child = new this.constructor($$$internal$$noop);
         var result = parent._result;
 
         if (state) {
@@ -1559,12 +1564,11 @@ process.chdir = function (dir) {
 
       @method catch
       @param {Function} onRejection
-      @param {String} label optional string for labeling the promise.
       Useful for tooling.
       @return {Promise}
     */
-      'catch': function(onRejection, label) {
-        return this.then(null, onRejection, label);
+      'catch': function(onRejection) {
+        return this.then(null, onRejection);
       }
     };
 
@@ -1601,8 +1605,8 @@ process.chdir = function (dir) {
     };
 
     var es6$promise$umd$$ES6Promise = {
-      Promise: $$es6$promise$promise$$default,
-      polyfill: $$es6$promise$polyfill$$default
+      'Promise': $$es6$promise$promise$$default,
+      'polyfill': $$es6$promise$polyfill$$default
     };
 
     /* global define:true module:true window: true */
