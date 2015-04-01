@@ -1,6 +1,6 @@
 {
   "name": "xhttp",
-  "version": "0.0.5",
+  "version": "0.0.6",
   "description": "Lightweight ajax with pluggable ES6 promises and no mandatory dependencies.",
   "author": "Mitranim",
   "main": "./dist/xhttp.js",
