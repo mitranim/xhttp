@@ -1,3 +1,7 @@
+> NOTE: I consider this deprecated in favour of the upcoming `fetch` standard.
+> See [github/fetch](https://github.com/github/fetch) (working implementation)
+> and the [standards proposal](https://fetch.spec.whatwg.org).
+
 ## Description
 
 `xhttp` is a lightweight ajax utility with pluggable ES6 promises, interceptors, and no mandatory dependencies. Think of it as `jQuery.ajax` without jQuery or `$http` without Angular. It's 12 KB minified with the optional `es6-promise` dependency.
