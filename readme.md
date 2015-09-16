@@ -166,9 +166,7 @@ xhttp.resInterceptors  -- applied to each success response
 xhttp.errInterceptors  -- applied to each failure response
 ```
 
-Request interceptors are called with `(data)`, where `data` is the data supplied in your options object.
-
-Success and error interceptors are called with `(data, xhr)`, where `data` is the parsed body of the server response, and `xhr` is the native XMLHttpRequest object. When an interceptor returns a non-undefined value, it replaces the data. This allows to use interceptors as transformers.
+All interceptors are called with `(data, xhr)`, where `data` is the data supplied in your options object (for request interceptors) or the parsed body of the server response (for response and error interceptors), and `xhr` is the native XMLHttpRequest object. When an interceptor returns a non-undefined value, it replaces the data. This allows to use interceptors as transformers.
 
 Interceptors are applied in the same order as you add them.
 
@@ -179,7 +177,8 @@ Adds a request interceptor or multiple.
 Example:
 
 ``` javascript
-xhttp.addReqInterceptor(function (data) {
+xhttp.addReqInterceptor(function (data, xhr) {
+  xhr.setRequestHeader('easter', 'bunnies')
   return _.compact(data)
 })
 ```
