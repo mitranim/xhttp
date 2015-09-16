@@ -159,14 +159,14 @@ Set to `false` to disable automatic conversion of request body based on `options
 `xhttp` has three groups of interceptors:
 
 ``` javascript
-xhttp.reqInterceptors  -- applied to the `data` of each request
+xhttp.reqInterceptors  -- applied to the options of each request
 
 xhttp.resInterceptors  -- applied to each success response
 
 xhttp.errInterceptors  -- applied to each failure response
 ```
 
-Request interceptors are called with `(data)`, where `data` is the data supplied in your options object.
+Request interceptors are called with `(options)`, where `options` is the config options object.
 
 Success and error interceptors are called with `(data, xhr)`, where `data` is the parsed body of the server response, and `xhr` is the native XMLHttpRequest object. When an interceptor returns a non-undefined value, it replaces the data. This allows to use interceptors as transformers.
 
@@ -179,8 +179,9 @@ Adds a request interceptor or multiple.
 Example:
 
 ``` javascript
-xhttp.addReqInterceptor(function (data) {
-  return _.compact(data)
+xhttp.addReqInterceptor(function (options) {
+  options.headers['my-header'] = 'blah'
+  return options
 })
 ```
 
