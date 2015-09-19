@@ -153,9 +153,9 @@ Options.prototype.$parseData = function() {
   if (this.processData != null && !this.processData) return
   if (!this.hasOwnProperty('data')) return
 
-  // Using a no-body method -> no need to have a body
-  if (this.$noBody()) {
-    delete this.data
+  // When using one of the "safe" methods, the body should be ignored
+  if (this.$safeMethod()) {
+    this.data = null
     return
   }
 
@@ -180,8 +180,8 @@ Options.prototype.$parseData = function() {
 /**
  * Checks if we're using a method that doesn't send a request body.
  */
-Options.prototype.$noBody = function() {
-  return this.method === 'GET' || this.method === 'OPTIONS'
+Options.prototype.$safeMethod = function() {
+  return this.method === 'GET' || this.method === 'HEAD' || this.method === 'OPTIONS'
 }
 
 /**
@@ -272,9 +272,9 @@ module.exports = parse
  * Table to map options.type to options.headers['Content-Type'].
  */
 var types = {
-  'plain'     : 'text/plain; charset=utf-8',
-  'json'      : 'application/json; charset=utf-8',
-  'form'      : 'application/x-www-form-urlencoded; charset=utf-8'
+  'plain': 'text/plain; charset=utf-8',
+  'json': 'application/json; charset=utf-8',
+  'form': 'application/x-www-form-urlencoded; charset=utf-8'
 }
 exports.types = types
 
@@ -282,9 +282,9 @@ exports.types = types
  * Content-type checker regexes.
  */
 var typeRegs = {
-  'plain'     : /text\/plain/i,
-  'json'      : /application\/json/i,
-  'form'      : /application\/x-www-form-urlencoded/i
+  'plain': /text\/plain/i,
+  'json': /application\/json/i,
+  'form': /application\/x-www-form-urlencoded/i
 }
 exports.typeRegs = typeRegs
 
@@ -298,8 +298,8 @@ function isObject (value) {
 exports.isObject = isObject
 
 /**
- * `hasOwnProperty` that works for objects that don't have this method, like
- * hash tables created with Object.create(null)
+ * `hasOwnProperty` that works for objects without the namesake method, like
+ * hash tables created with Object.create(null).
  */
 function ownProp (object, key) {
   return Object.hasOwnProperty.call(object, key)
@@ -307,17 +307,16 @@ function ownProp (object, key) {
 exports.ownProp = ownProp
 
 /**
- * Loops over own enumerable properties of an object, calling the callback on
- * each value with own execution context. Call this function with .call or
- * .apply to use a different execution context.
+ * Loops over own enumerable properties of an object, passing a value-key pair
+ * to the given callback on each iteration.
  */
-function forOwn (object, callback) {
-  if (!isObject(object)) return
+function forOwn (object, callback, thisArg) {
+  if (isObject(object)) {
+    var self = thisArg === undefined ? this : thisArg
 
-  for (var key in object) {
-    if (!ownProp(object, key)) continue
-
-    callback.call(this, object[key], key)
+    Object.keys(object).forEach(function (key) {
+      callback.call(self, object[key], key)
+    })
   }
 }
 exports.forOwn = forOwn
@@ -470,14 +469,22 @@ module.exports = function (promiseConstructor) {
 
   function xhttp (options) {
     return new promiseConstructor(function (resolve, reject) {
-
-      // Parse the options into an options object
-      options = new Options(options)
-
-      // Make the new request object
       var xhr = new XMLHttpRequest()
 
-      // Open with the given options
+      // Make sure `options` and `options.headers` are writable objects
+      if (!utils.isObject(options)) options = {}
+      if (!utils.isObject(options.headers)) options.headers = {}
+
+      // Apply request interceptors in order. If an interceptor returns an
+      // object, it replaces the previous options
+      xhttp.requestInterceptors.forEach(function (interceptor) {
+        var result = interceptor(options)
+        if (utils.isObject(result)) options = result
+      })
+
+      // Parse options
+      options = new Options(options)
+
       xhr.open(
         options.method,
         options.url,
@@ -486,19 +493,7 @@ module.exports = function (promiseConstructor) {
         options.password
       )
 
-      /**
-       * Apply request interceptors in order. Each interceptor is called with
-       * one argument: the `data` attribute of the options object. If a
-       * non-undefined value is returned, it replaces the data attribute.
-       */
-      if (!options.$noBody()) {
-        xhttp.reqInterceptors.forEach(function (interceptor) {
-          var result = interceptor(options.data, xhr)
-          if (result !== undefined) options.data = result
-        })
-      }
-
-      // Assign the headers
+      // Assign headers
       utils.forOwn(options.headers, function (value, key) {
         xhr.setRequestHeader(key, value)
       })
@@ -506,17 +501,15 @@ module.exports = function (promiseConstructor) {
       // Assign primitive options
       utils.assign(xhr, options.$simpleOptions())
 
-      // Attach failure listeners
       xhr.onerror = xhr.onabort = xhr.ontimeout = function() {
-        reject(parseResponse(xhr, xhttp.errInterceptors))
+        reject(parseResponse(xhr, xhttp.errorInterceptors))
       }
 
-      // Attach a success listener
       xhr.onload = function() {
         if (successful(xhr)) {
-          resolve(parseResponse(xhr, xhttp.resInterceptors))
+          resolve(parseResponse(xhr, xhttp.responseInterceptors))
         } else {
-          reject(parseResponse(xhr, xhttp.errInterceptors))
+          reject(parseResponse(xhr, xhttp.errorInterceptors))
         }
       }
 
@@ -529,14 +522,13 @@ module.exports = function (promiseConstructor) {
 
   /**
    * `xhttp` has three groups of interceptors:
-   *   reqInterceptors
-   *   resInterceptors
-   *   errInterceptors
+   *   requestInterceptors
+   *   responseInterceptors
+   *   errorInterceptors
    *
-   * Request interceptors are called with `(data)`, where data is the data
-   * passed in the xhttp config object supplied by the user. If an interceptor
-   * returns a non-undefined value, the value replaces the data. If the request
-   * method implies no body (like GET), request interceptors are ignored.
+   * Request interceptors are called with `(options)`, where options is the
+   * xhttp config object supplied by the user. They're allowed to mutate the
+   * config object, or optionally return a new object to replace it.
    *
    * Success and error interceptors are called with `(data, xhr)`, where data
    * is the parsed response and xhr is the native XMLHttpRequest object. Like
@@ -544,28 +536,42 @@ module.exports = function (promiseConstructor) {
    * non-undefined value.
    */
 
-  xhttp.reqInterceptors = []
+  xhttp.requestInterceptors = []
 
-  xhttp.resInterceptors = []
+  xhttp.responseInterceptors = []
 
-  xhttp.errInterceptors = []
+  xhttp.errorInterceptors = []
 
-  xhttp.addReqInterceptor = function (/* ... interceptors */) {
-    xhttp.reqInterceptors.push.apply(xhttp.reqInterceptors, arguments)
+  // Validates and registers a request interceptor.
+  xhttp.interceptRequest = function (interceptor) {
+    if (typeof interceptor !== 'function') {
+      throw new Error('An interceptor must be a function, got: ' + interceptor)
+    }
+    if (interceptor.length !== 1) {
+      console.warn("Request interceptor's arity is expected to be 1, got " + interceptor.length + ":", interceptor)
+    }
+    xhttp.requestInterceptors.push(interceptor)
   }
 
-  xhttp.addResInterceptor = function (/* ... interceptors */) {
-    xhttp.resInterceptors.push.apply(xhttp.resInterceptors, arguments)
+  // Validates and registers a response interceptor.
+  xhttp.interceptResponse = function (interceptor) {
+    if (typeof interceptor !== 'function') {
+      throw new Error('An interceptor must be a function, got: ' + interceptor)
+    }
+    xhttp.responseInterceptors.push(interceptor)
   }
 
-  xhttp.addErrInterceptor = function (/* ... interceptors */) {
-    xhttp.errInterceptors.push.apply(xhttp.errInterceptors, arguments)
+  // Validates and registers an error interceptor.
+  xhttp.interceptError = function (interceptor) {
+    if (typeof interceptor !== 'function') {
+      throw new Error('An interceptor must be a function, got: ' + interceptor)
+    }
+    xhttp.errorInterceptors.push(interceptor)
   }
 
   /******************************** "Export" *********************************/
 
   return xhttp
-
 }
 
 },{"./options":2,"./parse":3,"./utils":4}],6:[function(require,module,exports){
