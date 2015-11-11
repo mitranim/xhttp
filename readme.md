@@ -28,16 +28,23 @@ The bower version uses the pre-built file that exposes the global `window.xhttp`
 
 ## Initialisation
 
-To get the default version, just require it:
+To get the default version, which will use the `es6-promise` shim, just require it:
 
 ```javascript
 var xhttp = require('xhttp')
 ```
 
-This will use an ES6 promise shim. You can also make your own version. Require `xhttp/custom` and call it with a custom promise constructor:
+If your target browsers support native Promises, or the `Promise`
+constructor is provided by a polyfill or other transformation, you
+can include the native version, instead:
 
 ```javascript
-var xhttp = require('xhttp/custom')(Promise)  // native or polyfill
+var xhttp = require('xhttp/native')
+```
+
+You can also make your own version. Require `xhttp/custom` and call it with a custom promise constructor:
+
+```javascript
 var xhttp = require('xhttp/custom')(require('q').Promise)
 var xhttp = require('xhttp/custom')(require('bluebird'))
 ```
