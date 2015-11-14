@@ -51,6 +51,11 @@ var xhttp = require('xhttp/custom')(require('bluebird'))
 
 Any spec-compliant Promise implementation will do. This includes most popular promise libraries, so you don't have to worry about it.
 
+In ES6 (native or with the [Babel](https://babeljs.io/)) you can use:
+```javascript
+import xhttp from 'xhttp/native';
+```
+
 ## Usage
 
 ### Making a request
