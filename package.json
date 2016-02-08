@@ -1,27 +1,38 @@
 {
   "name": "xhttp",
-  "version": "0.0.9",
-  "description": "Lightweight ajax with pluggable ES6 promises and no mandatory dependencies.",
-  "author": "Mitranim",
-  "main": "./lib/index.js",
+  "version": "0.0.10",
+  "description": "Functional wrapper around XMLHttpRequest",
+  "author": "Mitranim <me@mitranim.com>",
+  "main": "dist/xhttp.js",
+  "jsnext:main": "lib/xhttp.js",
   "scripts": {
-    "build": "./scripts/build.sh",
-    "prepublish": "npm run build"
+    "start": "gulp",
+    "test": "node test/test",
+    "prepublish": "gulp build && node test/test"
   },
   "repository": {
     "type": "git",
     "url": "git://github.com/Mitranim/xhttp.git"
   },
-   "keywords": [
+  "license": "MIT",
+  "keywords": [
     "ajax",
-    "promises",
-    "browser"
+    "xhr"
   ],
- "dependencies": {
-    "es6-promise": "latest"
-  },
   "devDependencies": {
-    "browserify": "latest",
-    "uglify-js": "latest"
+    "babel-plugin-check-es2015-constants": "^6.5.0",
+    "babel-plugin-transform-es2015-arrow-functions": "^6.5.0",
+    "babel-plugin-transform-es2015-block-scoped-functions": "^6.5.0",
+    "babel-plugin-transform-es2015-block-scoping": "^6.5.0",
+    "babel-plugin-transform-es2015-literals": "^6.5.0",
+    "babel-plugin-transform-es2015-modules-commonjs": "^6.5.0",
+    "babel-plugin-transform-es2015-template-literals": "^6.5.0",
+    "del": "^2.2.0",
+    "gulp": "gulpjs/gulp#4.0",
+    "gulp-babel": "^6.1.2",
+    "gulp-load-plugins": "^1.2.0",
+    "gulp-rename": "^1.2.2",
+    "gulp-uglify": "^1.5.2",
+    "gulp-watch": "^4.3.5"
   }
 }
