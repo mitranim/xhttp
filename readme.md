@@ -1,3 +1,5 @@
+[![js-standard-style](https://img.shields.io/badge/code%20style-standard-brightgreen.svg?style=flat)](http://standardjs.com)
+
 ## Description
 
 Functional wrapper around `XMLHttpRequest`. Assumes JSON. Treats non-`2**` codes

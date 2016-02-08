@@ -1,12 +1,5 @@
 'use strict'
 
-/**
- * Requires gulp 4.0:
- *   "gulp": "gulpjs/gulp#4.0"
- *
- * Requires Node.js 4.0+
- */
-
 /** **************************** Dependencies ********************************/
 
 const $ = require('gulp-load-plugins')()
