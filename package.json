@@ -1,10 +1,10 @@
 {
   "name": "xhttp",
-  "version": "0.0.11",
+  "version": "0.0.12",
   "description": "Functional wrapper around XMLHttpRequest",
   "author": "Mitranim <me@mitranim.com>",
   "main": "dist/xhttp.js",
-  "jsnext:main": "lib/xhttp.js",
+  "jsnext:main": "dist-jsnext/xhttp.js",
   "scripts": {
     "start": "gulp",
     "test": "node test/test",

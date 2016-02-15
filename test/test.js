@@ -1,6 +1,6 @@
 'use strict'
 
-const xhttp = require('../lib/xhttp').xhttp
+const xhttp = require(process.cwd()).xhttp
 
 /**
  * Utils
