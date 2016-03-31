@@ -48,6 +48,12 @@ xhttp(
 )
 ```
 
+`xhttp` returns a XMLHttpRequest. It can be used to cancel a request.
+```js
+const handle = xhttp(/* ... */)
+handle.abort()
+```
+
 ### `params`
 
 ```
