@@ -164,12 +164,15 @@ if (xhr._url !== '/test') throw Error()
 if (xhr._body !== JSON.stringify({one: [1]})) throw Error()
 
 /**
- * XHR handle 
+ * XHR handle
  */
+
 RESET()
+
 const handle = xhttp({url: ''}, done, fail)
-if(!(handle instanceof XMLHttpRequest)) throw Error()
- 
+
+if (!(handle instanceof XMLHttpRequest)) throw Error()
+
 /**
  * Misc
  */
