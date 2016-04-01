@@ -48,9 +48,12 @@ xhttp(
 )
 ```
 
-`xhttp` returns a XMLHttpRequest. It can be used to cancel a request.
+`xhttp` returns a XMLHttpRequest. It can be used for low level stuff (i.e. to cancel a request).
 ```js
+// This request runs for a long time
 const handle = xhttp(/* ... */)
+
+// It can be canceled (if still running) 
 handle.abort()
 ```
 
