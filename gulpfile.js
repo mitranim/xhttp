@@ -5,19 +5,19 @@
 const $ = require('gulp-load-plugins')()
 const del = require('del')
 const gulp = require('gulp')
-const exec = require('child_process').exec
+const {exec} = require('child_process')
 
 /** ******************************* Globals **********************************/
 
 const src = {
   lib: 'lib/**/*.js',
+  jsnext: 'dist-jsnext/**/*.js',
   main: 'dist/**/*.js',
-  next: 'dist-jsnext/**/*.js'
 }
 
 const out = {
+  jsnext: 'dist-jsnext',
   main: 'dist',
-  next: 'dist-jsnext'
 }
 
 const test = 'test/**/*.js'
@@ -26,44 +26,50 @@ const testCommand = require('./package').scripts.test
 
 function noop () {}
 
-const configNext = {
+const babelConfigJsNext = {
   plugins: [
     'check-es2015-constants',
     'transform-es2015-arrow-functions',
     'transform-es2015-block-scoped-functions',
     'transform-es2015-block-scoping',
+    'transform-es2015-destructuring',
+    'transform-es2015-function-name',
     'transform-es2015-literals',
-    'transform-es2015-template-literals'
+    'transform-es2015-parameters',
+    'transform-es2015-shorthand-properties',
+    ['transform-es2015-spread', {loose: true}],
+    'transform-es2015-template-literals',
+    'transform-object-rest-spread',
   ]
 }
 
-const configMain = {
-  plugins: configNext.plugins.concat('transform-es2015-modules-commonjs')
+const babelConfigMain = {
+  plugins: babelConfigJsNext.plugins.concat('transform-es2015-modules-commonjs')
 }
 
 /** ******************************** Tasks ***********************************/
 
 gulp.task('clear', () => (
-  del([out.main, out.next]).catch(noop)
+  del([out.main, out.jsnext]).catch(noop)
+))
+
+gulp.task('compile:jsnext', () => (
+  gulp.src(src.lib)
+    .pipe($.babel(babelConfigJsNext))
+    .pipe(gulp.dest(out.jsnext))
 ))
 
 gulp.task('compile:main', () => (
   gulp.src(src.lib)
-    .pipe($.babel(configMain))
+    .pipe($.babel(babelConfigMain))
     .pipe(gulp.dest(out.main))
 ))
 
-gulp.task('compile:next', () => (
-  gulp.src(src.lib)
-    .pipe($.babel(configNext))
-    .pipe(gulp.dest(out.next))
-))
-
-gulp.task('compile', gulp.parallel('compile:main', 'compile:next'))
+gulp.task('compile', gulp.parallel('compile:jsnext', 'compile:main'))
 
 gulp.task('minify', () => (
   gulp.src(src.main)
-    .pipe($.uglify({mangle: true, compress: {warnings: false}}))
+    .pipe($.uglify({mangle: true, compress: {warnings: false, screw_ie8: true}}))
     .pipe($.rename(path => {
       path.extname = '.min.js'
     }))
@@ -71,8 +77,9 @@ gulp.task('minify', () => (
 ))
 
 gulp.task('test', done => {
-  exec(testCommand, (err, stdout) => {
+  exec(testCommand, (err, stdout, stderr) => {
     process.stdout.write(stdout)
+    process.stderr.write(stderr)
     done(err)
   })
 })

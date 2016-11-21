@@ -17,22 +17,34 @@
   "license": "MIT",
   "keywords": [
     "ajax",
-    "xhr"
+    "xhr",
+    "http",
+    "XMLHttpRequest"
   ],
   "devDependencies": {
-    "babel-plugin-check-es2015-constants": "^6.5.0",
-    "babel-plugin-transform-es2015-arrow-functions": "^6.5.0",
-    "babel-plugin-transform-es2015-block-scoped-functions": "^6.5.0",
-    "babel-plugin-transform-es2015-block-scoping": "^6.5.0",
-    "babel-plugin-transform-es2015-literals": "^6.5.0",
-    "babel-plugin-transform-es2015-modules-commonjs": "^6.5.0",
-    "babel-plugin-transform-es2015-template-literals": "^6.5.0",
-    "del": "^2.2.0",
+    "babel-core": "6.18.2",
+    "babel-eslint": "7.1.1",
+    "babel-plugin-check-es2015-constants": "6.8.0",
+    "babel-plugin-transform-es2015-arrow-functions": "6.8.0",
+    "babel-plugin-transform-es2015-block-scoped-functions": "6.8.0",
+    "babel-plugin-transform-es2015-block-scoping": "6.18.0",
+    "babel-plugin-transform-es2015-destructuring": "6.19.0",
+    "babel-plugin-transform-es2015-function-name": "6.9.0",
+    "babel-plugin-transform-es2015-literals": "6.8.0",
+    "babel-plugin-transform-es2015-modules-commonjs": "6.18.0",
+    "babel-plugin-transform-es2015-parameters": "6.18.0",
+    "babel-plugin-transform-es2015-shorthand-properties": "6.18.0",
+    "babel-plugin-transform-es2015-spread": "6.8.0",
+    "babel-plugin-transform-es2015-template-literals": "6.8.0",
+    "babel-plugin-transform-object-rest-spread": "6.19.0",
+    "del": "2.2.2",
+    "eslint": "3.10.2",
+    "eslint-plugin-react": "6.7.1",
     "gulp": "gulpjs/gulp#4.0",
-    "gulp-babel": "^6.1.2",
-    "gulp-load-plugins": "^1.2.0",
-    "gulp-rename": "^1.2.2",
-    "gulp-uglify": "^1.5.2",
-    "gulp-watch": "^4.3.5"
+    "gulp-babel": "6.1.2",
+    "gulp-load-plugins": "1.4.0",
+    "gulp-rename": "1.2.2",
+    "gulp-uglify": "2.0.0",
+    "gulp-watch": "4.3.11"
   }
 }

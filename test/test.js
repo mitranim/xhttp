@@ -1,6 +1,10 @@
 'use strict'
 
-const xhttp = require(process.cwd()).xhttp
+/**
+ * TODO rewrite with blocks, without root vars
+ */
+
+const {xhttp} = require(process.cwd())
 
 /**
  * Utils
@@ -71,7 +75,7 @@ class XMLHttpRequest {
     if (this.readyState === OPENED) {
       this.readyState = DONE
       this.status = 200
-      this.responseText = `{"succeeded": true}`
+      this.responseText = '{"succeeded": true}'
       this._body = body
       if (typeof this.onload === 'function') this.onload()
     } else {
@@ -83,7 +87,7 @@ class XMLHttpRequest {
     if (this.readyState === OPENED) {
       this.readyState = DONE
       this.status = 400
-      this.responseText = `{"failed": true}`
+      this.responseText = '{"failed": true}'
       this._body = body
       if (typeof this.onerror === 'function') this.onerror()
     } else {

@@ -1,0 +1,66 @@
+{
+  "parser": "babel-eslint",
+  "extends": "eslint:recommended",
+  "env": {
+    "browser": true,
+    "node": true
+  },
+  "plugins": [
+    "react"
+  ],
+  "rules": {
+    "camelcase": 0,
+    "comma-dangle": 0,
+    "comma-spacing": 2,
+    "consistent-return": 2,
+    "curly": [2, "multi-line"],
+    "dot-notation": [2, {"allowKeywords": true}],
+    "eqeqeq": [2, "allow-null"],
+    "indent": [2, 2, {"SwitchCase": 1}],
+    "jsx-quotes": [2, "prefer-single"],
+    "max-len": [2, 100],
+    "new-cap": 0,
+    "no-cond-assign": 2,
+    "no-console": 0,
+    "no-empty": 0,
+    "no-extra-boolean-cast": 2,
+    "no-extra-semi": 2,
+    "no-fallthrough": 2,
+    "no-func-assign": 2,
+    "no-inner-declarations": [2, "both"],
+    "no-loop-func": 0,
+    "no-mixed-spaces-and-tabs": 2,
+    "no-restricted-globals": [2,
+      // window (browser)
+      "alert", "blur", "confirm", "event", "fetch", "find", "focus", "history",
+      "length", "location", "name", "navigator", "open", "parent", "print",
+      "prompt", "scroll", "self", "status", "stop", "top",
+      // global (node)
+      "root"
+    ],
+    "no-shadow-restricted-names": 2,
+    "no-sparse-arrays": 2,
+    "no-throw-literal": 2,
+    "no-trailing-spaces": 2,
+    "no-unexpected-multiline": 2,
+    "no-unreachable": 2,
+    "no-unused-vars": [2, {"argsIgnorePattern": "^_", "varsIgnorePattern": "^_"}],
+    "no-var": 2,
+    "object-curly-spacing": [2, "never"],
+    "object-shorthand": 2,
+    "prefer-arrow-callback": 0,
+    "prefer-const": 2,
+    "quote-props": [2, "as-needed"],
+    "quotes": [2, "single", "avoid-escape"],
+    "semi": [2, "never"],
+    "space-before-blocks": [2, "always"],
+    "space-in-parens": [2, "never"],
+    "spaced-comment": [2, "always"],
+    "strict": 0,
+    "valid-typeof": 2,
+    "yoda": 2
+  },
+  "globals": {
+    "XMLHttpRequest": true
+  }
+}
