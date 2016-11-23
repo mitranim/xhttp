@@ -1,7 +1,7 @@
 {
   "name": "xhttp",
-  "version": "0.0.14",
-  "description": "Functional wrapper around XMLHttpRequest",
+  "version": "0.1.0",
+  "description": "Toolkit for XMLHttpRequest",
   "author": "Mitranim <me@mitranim.com>",
   "main": "dist/xhttp.js",
   "jsnext:main": "dist-jsnext/xhttp.js",
@@ -16,17 +16,16 @@
   },
   "license": "MIT",
   "keywords": [
+    "XMLHttpRequest",
     "ajax",
-    "xhr",
     "http",
-    "XMLHttpRequest"
+    "xhr"
   ],
   "devDependencies": {
     "babel-core": "6.18.2",
     "babel-eslint": "7.1.1",
     "babel-plugin-check-es2015-constants": "6.8.0",
     "babel-plugin-transform-es2015-arrow-functions": "6.8.0",
-    "babel-plugin-transform-es2015-block-scoped-functions": "6.8.0",
     "babel-plugin-transform-es2015-block-scoping": "6.18.0",
     "babel-plugin-transform-es2015-destructuring": "6.19.0",
     "babel-plugin-transform-es2015-function-name": "6.9.0",
@@ -36,7 +35,6 @@
     "babel-plugin-transform-es2015-shorthand-properties": "6.18.0",
     "babel-plugin-transform-es2015-spread": "6.8.0",
     "babel-plugin-transform-es2015-template-literals": "6.8.0",
-    "babel-plugin-transform-object-rest-spread": "6.19.0",
     "del": "2.2.2",
     "eslint": "3.10.2",
     "eslint-plugin-react": "6.7.1",

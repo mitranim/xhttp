@@ -1,46 +1,24 @@
 'use strict'
 
-/**
- * TODO rewrite with blocks, without root vars
- */
+/* eslint-disable quote-props, quotes, max-len */
 
-const {xhttp} = require(process.cwd())
-
-/**
- * Utils
- */
-
-let res, err, xhr, shouldFail
-
-function RESET () {
-  res = err = xhr = shouldFail = undefined
-}
-
-function done (_res, _xhr) {
-  if (shouldFail) throw Error()
-  res = _res
-  xhr = _xhr
-}
-
-function fail (_err, _xhr) {
-  if (!shouldFail) throw Error()
-  err = _err
-  xhr = _xhr
-}
+const {isFunction} = require('util')
+const assert = require('assert')
+const {Xhr} = require(process.cwd())
 
 /**
- * Mock
+ * Mocks
  */
-
-const UNSENT = 0
-const OPENED = 1
-// const HEADERS_RECEIVED = 2
-// const LOADING = 3
-const DONE = 4
 
 class XMLHttpRequest {
   constructor () {
-    this.readyState = UNSENT
+    this.UNSENT = 0
+    this.OPENED = 1
+    this.HEADERS_RECEIVED = 2
+    this.LOADING = 3
+    this.DONE = 4
+
+    this.readyState = this.UNSENT
 
     this.onerror = null
     this.ontimeout = null
@@ -50,135 +28,256 @@ class XMLHttpRequest {
     this.status = 0
     this.responseText = ''
 
-    this._method = null
-    this._url = null
-    this._body = null
-    this._headers = []
+    // Non-standard props
+    this.params = null
+    this.result = null
+    this.requestMethod = null
+    this.requestUrl = null
+    this.requestHeaders = {}
+    this.requestBody = null
+    this.responseHeaders = {}
   }
 
   open (method, url) {
-    if (this.readyState === UNSENT) {
-      this.readyState = OPENED
-      this._method = method
-      this._url = url
-    } else {
-      throw Error()
-    }
+    assert.deepEqual(this.readyState, this.UNSENT,
+      `Unexpected .open() call in state ${this.readyState}`)
+
+    this.readyState = this.OPENED
+    this.requestMethod = method
+    this.requestUrl = url
   }
 
   send (body) {
-    if (shouldFail) this._fail(body)
-    else this._send(body)
-  }
+    assert.deepEqual(this.readyState, this.OPENED,
+      `Unexpected .send() call in state ${this.readyState}`)
 
-  _send (body) {
-    if (this.readyState === OPENED) {
-      this.readyState = DONE
-      this.status = 200
-      this.responseText = '{"succeeded": true}'
-      this._body = body
-      if (typeof this.onload === 'function') this.onload()
-    } else {
-      throw Error()
-    }
-  }
+    const {status, reason, headers, text} = XMLHttpRequest.nextResponse
 
-  _fail (body) {
-    if (this.readyState === OPENED) {
-      this.readyState = DONE
-      this.status = 400
-      this.responseText = '{"failed": true}'
-      this._body = body
-      if (typeof this.onerror === 'function') this.onerror()
-    } else {
-      throw Error()
-    }
+    this.requestBody = body
+    this.readyState = this.DONE
+    this.status = status
+    this.responseHeaders = headers
+    this.responseText = text
+
+    const eventType = reason || 'load'
+    const methodName = 'on' + eventType
+
+    if (isFunction(this[methodName])) this[methodName]({target: this, type: eventType})
   }
 
   setRequestHeader (key, value) {
-    if (this.readyState === OPENED) {
-      this._headers.push([key, value])
-    } else {
-      throw Error()
-    }
+    assert.deepEqual(this.readyState, this.OPENED,
+      `Unexpected .setRequestHeader() call in state ${this.readyState}`)
+    this.requestHeaders[key] = value
   }
 
-  _getRequestHeaders () {
-    const buffer = {}
-    for (const pair of this._headers) {
-      buffer[pair[0]] = pair[1]
-    }
-    return buffer
+  getResponseHeader (key) {
+    return this.responseHeaders[key]
+  }
+
+  getAllResponseHeaders () {
+    return dictToLines(this.responseHeaders)
   }
 }
+
+XMLHttpRequest.nextResponse = null
+
 global.XMLHttpRequest = XMLHttpRequest
 
-/**
- * Success
- */
+const baseResponseHeaders = {
+  'date': new Date().toUTCString(),
+  'last-modified': new Date().toUTCString(),
+  'cache-control': 'public, max-age=0',
+  'connection': 'keep-alive',
+  'accept-ranges': 'bytes',
+}
 
-RESET()
+const jsonSendingHeaders = {'content-type': 'application/json; charset=UTF-8'}
 
-xhttp({url: ''}, done, fail)
+const formdataSendingHeaders = {'content-type': 'application/x-www-form-urlencoded; charset=UTF-8'}
 
-if (!res.succeeded) throw Error()
-if (err != null) throw Error()
-if (!(xhr instanceof XMLHttpRequest)) throw Error()
-
-/**
- * Failure
- */
-
-RESET()
-
-shouldFail = true
-
-xhttp({url: ''}, done, fail)
-
-if (res != null) throw Error()
-if (!err.failed) throw Error()
-if (!(xhr instanceof XMLHttpRequest)) throw Error()
+function XhrSync (params) {
+  let result
+  return [Xhr(params, x => result = x), result]
+}
 
 /**
- * Params
+ * Test
  */
 
-RESET()
+basic_usage: {
+  XMLHttpRequest.nextResponse = {status: 200, headers: baseResponseHeaders, text: ''}
+  const [xhr, result] = XhrSync({url: '/'})
 
-xhttp({url: '/test', method: 'post', headers: {secret: 'test'}}, done, fail)
+  assert(xhr instanceof XMLHttpRequest, `Expected an XMLHttpRequest instance`)
 
-if (!res.succeeded) throw Error()
-if (err != null) throw Error()
-if (!(xhr instanceof XMLHttpRequest)) throw Error()
-if (xhr._method !== 'POST') throw Error()
-if (xhr._url !== '/test') throw Error()
-if (!xhr._getRequestHeaders().secret) throw Error()
+  assert.deepEqual(
+    result,
+    {
+      xhr,
+      // mock event
+      event: {target: xhr, type: 'load'},
+      // parsed params
+      params: {rawParams: {url: '/'}, method: 'GET', url: '/', async: true, headers: {}, body: null},
+      complete: true,
+      reason: 'load',
+      status: 200,
+      ok: true,
+      headers: XMLHttpRequest.nextResponse.headers,
+      body: '',
+    },
+    `Expected result to match provided template`
+  )
+}
 
-RESET()
+passthrough_request_body: {
+  XMLHttpRequest.nextResponse = {status: 200, headers: baseResponseHeaders, text: ''}
+  const [{requestBody}, {params: {body}}] = XhrSync({
+    url: '/',
+    method: 'post',
+    body: {msg: 'hello'},
+  })
+  assert.deepEqual(body, {msg: 'hello'})
+  assert.deepEqual(requestBody, {msg: 'hello'})
+}
 
-xhttp({url: '/test', body: {one: 1, two: 2}}, done, fail)
+encode_request_body_json: {
+  XMLHttpRequest.nextResponse = {status: 200, headers: baseResponseHeaders, text: ''}
+  const [{requestBody}, {params: {body}}] = XhrSync({
+    url: '/',
+    method: 'post',
+    headers: jsonSendingHeaders,
+    body: {msg: 'hello'},
+  })
+  assert.deepEqual(body, JSON.stringify({msg: 'hello'}))
+  assert.deepEqual(requestBody, JSON.stringify({msg: 'hello'}))
+}
 
-if (xhr._url !== '/test?one=1&two=2') throw Error()
+encode_request_body_formdata: {
+  XMLHttpRequest.nextResponse = {status: 200, headers: baseResponseHeaders, text: ''}
+  const [{requestBody}, {params: {body}}] = XhrSync({
+    url: '/',
+    method: 'post',
+    headers: formdataSendingHeaders,
+    body: {msg: 'hello world'},
+  })
+  assert.deepEqual(body, 'msg=hello%20world')
+  assert.deepEqual(requestBody, 'msg=hello%20world')
+}
 
-RESET()
+encode_request_body_readonly_formdata: {
+  XMLHttpRequest.nextResponse = {status: 200, headers: baseResponseHeaders, text: ''}
 
-xhttp({url: '/test', method: 'post', body: {one: [1]}}, done, fail)
+  // code duplication = defense against random mutations (just kidding)
 
-if (xhr._url !== '/test') throw Error()
-if (xhr._body !== JSON.stringify({one: [1]})) throw Error()
+  for (const method of ['get', 'head', 'options']) {
+    const [{requestBody}, {params: {url}}] = XhrSync({
+      url: '/',
+      method,
+      body: {msg: 'hello'},
+    })
+    assert.deepEqual(url, '/?msg=hello')
+    assert.deepEqual(requestBody, null)
+  }
+
+  for (const method of ['get', 'head', 'options']) {
+    const [{requestBody}, {params: {url}}] = XhrSync({
+      url: '/?blah=blah',
+      method,
+      body: {msg: 'hello world'},
+    })
+    assert.deepEqual(url, '/?blah=blah&msg=hello%20world')
+    assert.deepEqual(requestBody, null)
+  }
+
+  for (const method of ['post', 'put', 'patch', 'delete']) {
+    const [{requestBody}, {params: {url}}] = XhrSync({
+      url: '/',
+      method,
+      body: {msg: 'hello world'},
+    })
+    assert.deepEqual(url, '/')
+    assert.deepEqual(requestBody, {msg: 'hello world'})
+  }
+}
+
+passthrough_response_body: {
+  const text = JSON.stringify({msg: 'hello'})
+  XMLHttpRequest.nextResponse = {status: 200, headers: baseResponseHeaders, text}
+  const [, {body}] = XhrSync({url: '/'})
+  assert.deepEqual(body, text)
+}
+
+parse_response_body_json: {
+  const text = JSON.stringify({msg: 'hello'})
+  XMLHttpRequest.nextResponse = {
+    status: 200,
+    headers: merge(baseResponseHeaders, jsonSendingHeaders),
+    text,
+  }
+  const [, {body}] = XhrSync({url: '/'})
+  assert.deepEqual(body, {msg: 'hello'})
+}
+
+not_ok: {
+  XMLHttpRequest.nextResponse = {
+    status: 400,
+    headers: merge(baseResponseHeaders, jsonSendingHeaders),
+    text: JSON.stringify({msg: 'UR MOM IS FAT'}),
+  }
+  const [, {complete, reason, status, ok, body}] = XhrSync({url: '/'})
+
+  assert.deepEqual(complete, true)
+  assert.deepEqual(reason, 'load')
+  assert.deepEqual(status, 400)
+  assert.deepEqual(ok, false)
+  assert.deepEqual(body, {msg: 'UR MOM IS FAT'})
+}
+
+detect_abort: {
+  XMLHttpRequest.nextResponse = {status: 0, reason: 'abort', headers: baseResponseHeaders, text: ''}
+  const [, {complete, ok, reason}] = XhrSync({url: '/'})
+  assert.deepEqual(complete, true)
+  assert.deepEqual(ok, false)
+  assert.deepEqual(reason, 'abort')
+}
+
+detect_error: {
+  XMLHttpRequest.nextResponse = {status: 0, reason: 'error', headers: baseResponseHeaders, text: ''}
+  const [, {complete, ok, reason}] = XhrSync({url: '/'})
+  assert.deepEqual(complete, true)
+  assert.deepEqual(ok, false)
+  assert.deepEqual(reason, 'error')
+}
+
+detect_timeout: {
+  XMLHttpRequest.nextResponse = {status: 0, reason: 'timeout', headers: baseResponseHeaders, text: ''}
+  const [, {complete, ok, reason}] = XhrSync({url: '/'})
+  assert.deepEqual(complete, true)
+  assert.deepEqual(ok, false)
+  assert.deepEqual(reason, 'timeout')
+}
 
 /**
- * XHR handle
+ * Utils
  */
 
-RESET()
+function dictToLines (dict) {
+  let lines = ''
+  for (const key in dict) lines += `${key}: ${dict[key]}\n`
+  return lines
+}
 
-const handle = xhttp({url: ''}, done, fail)
+function merge (...args) {
+  return args.reduce(assignOne, {})
+}
 
-if (!(handle instanceof XMLHttpRequest)) throw Error()
+function assignOne (left, right) {
+  return Object.assign(left, right)
+}
 
 /**
  * Misc
  */
 
-console.info(`[${new Date().getHours()}:${new Date().getMinutes()}:${new Date().getSeconds()}] Finished test without errors.`)
+console.info(`[${new Date().getHours()}:${new Date().getMinutes()}:${new Date().getSeconds()}] Finished test without errors.`) // eslint-disable-line

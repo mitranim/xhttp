@@ -1,19 +1,73 @@
-[![js-standard-style](https://img.shields.io/badge/code%20style-standard-brightgreen.svg?style=flat)](http://standardjs.com)
-
 ## Description
 
-Functional wrapper around `XMLHttpRequest`. Assumes JSON. Treats non-`2**` codes
-as errors. Doesn't force promises, easy to wrap for a promise-based API. Should
-be compatible with IE9+.
+Toolkit for `XMLHttpRequest`, the browser API for making HTTP requests. Makes it
+practical and convenient to use.
+
+Difference from other similar libraries:
+  * does **not** abstract away the underlying `XMLHttpRequest` object
+  * no premature branching: one callback and one result
+  * doesn't force promises (easy to add)
+
+Small (≈250 LOC) and has no dependencies. Compatible with IE9+.
 
 ## TOC
 
+* [Why](#why)
 * [Installation](#installation)
 * [API](#api)
-  * [params](#params)
-  * [success](#success)
-  * [error](#error)
+  * [`Xhr`](#xhrparams-ondone---xmlhttprequest)
+  * [Params](#params)
+  * [Result](#result)
+  * [Encoding and Parsing](#encoding-and-parsing)
+* [API (Secondary)](#api-secondary)
+  * [`xhrInitParams`](#xhrinitparamsxhr-params)
+  * [`xhrSetMultiCallback`](#xhrsetmulticallbackxhr-fun)
+  * [`xhrOpen`](#xhropenxhr)
+  * [`xhrSendHeaders`](#xhrsendheadersxhr)
+  * [`xhrSendBody`](#xhrsendbodyxhr)
+  * [`xhrDestroy`](#xhrdestroyxhr)
 * [Promises](#promises)
+
+## Why
+
+### Why another library?
+
+Most HTTP libraries, including earlier versions of this one, make the same
+mistakes `jQuery.ajax` did:
+
+  * premature branching into multiple callbacks
+  * one huge over-configurable function instead of a toolkit
+  * multiple arguments instead of one result
+
+JavaScript forces callbacks for asynchonous actions. This alone is bad enough.
+_Multiple_ callbacks for one action is a recipe for pain and suffering. It
+causes people to invent "finally"-style callbacks just to hack around the fact
+they have branched prematurely. One continuation is better than many; it's never
+too late to branch!
+
+It's common to spread request results over multiple arguments (body, xhr etc.).
+In contrast, bundling it all into a single value (see [Result](#result)) is very
+convenient for further API adaptations. You can easily add a
+[Promise-based](#promises) API and even bolt `async/await` on top of it without
+losing anything.
+
+Many libraries make another big mistake: losing a reference to the underlying
+`XMLHttpRequest` object, masking it behind callbacks or a promise.
+
+### Why not `fetch`?
+
+(`fetch` is a recently standardised alternative to `XMLHttpRequest`.)
+
+`fetch` is fundamentally broken because it gives you a promise instead of a
+reference to the HTTP task, masking a rich, manageable reference behind
+ephemeral callbacks. As a result, it lacks such vital features as:
+
+  * progress events
+  * ability to abort
+
+It has only one real advantage over `XMLHttpRequest`: streaming the response
+instead of buffering it all in memory, but this is irrelevant for most uses, and
+will probably get bolted on `XMLHttpRequest` some day.
 
 ## Installation
 
@@ -23,66 +77,52 @@ npm i --save xhttp
 npm i --save-dev xhttp
 ```
 
-`xhttp` is published as a CommonJS-style module. It assumes you're using a
-module-oriented build system such as Webpack or browserify.
+This is a CommonJS-style package. It assumes you're using a package-oriented
+build system such as Webpack or browserify.
 
 ```js
-import {xhttp} from 'xhttp'
+import {Xhr} from 'xhttp'
 // or
-const {xhttp} = require('xhttp')
-
-xhttp(
-  {url: '/api/some-resource'},
-  (res, xhr) => {/* ... */},
-  (err, xhr) => {/* ... */}
-)
+const {Xhr} = require('xhttp')
 ```
 
 ## API
 
-```
-xhttp(
-  params :: Object,
-  onSuccess :: Function,
-  onError :: Function
-)
-```
+### `Xhr(params, onDone) -> XMLHttpRequest`
 
-`xhttp` returns a XMLHttpRequest. It can be used for low level stuff (i.e. to cancel a request).
-```js
-// This request runs for a long time
-const handle = xhttp(/* ... */)
+The primary API of this library. Takes configuration [params](#params) and makes
+a request. When the request stops, calls the provided `onDone` function, passing
 
-// It can be canceled (if still running) 
-handle.abort()
-```
+the final [result](#result), which contain all relevant
 
-### `params`
+Note: there's no "success" or "failure" callbacks.
 
-```
+### Params
+
+The configuration dict passed to `Xhr` must have the following structure.
+
+```ml
 url :: String
 
   required
 
+  `body` may be encoded into `url`, see Encoding and Parsing
+
 method :: String
 
   optional
-  default = 'GET'
+
+  default = "GET"
 
 body :: Object
 
   optional
-  when method is GET, HEAD or OPTIONS, body is converted
-  into a query string and appended to the URL
-  otherwise it's JSON-encoded
+
+  may be automatically encoded, see Encoding and Parsing
 
 headers :: Object
 
   optional
-  default = {
-    'Content-Type': 'application/json',
-    'Accept': 'application/json'
-  }
 
 async :: Boolean
 
@@ -98,34 +138,186 @@ password :: String
   optional
 ```
 
-### Success
+### Result
 
-```js
-xhttp(_, onSuccess, _)
+This is what the value passed to the `Xhr` callback looks like.
 
-function onSuccess (response, xhr) {/* ... */}
+```ml
+xhr :: XMLHttpRequest
+
+  self-explanatory
+
+event :: Event
+
+  corresponds to the type of the event listener (1 of 4)
+  that fired when the request was stopped; see `reason` below
+
+params :: Params
+
+  see the Params section
+
+reason :: String
+
+  corresponds to the type of the event listener (1 of 4)
+  that fired when the request was stopped
+
+  one of:
+    "abort"    -- request was aborted
+    "error"    -- network error (dns lookup, loss of connection, etc.)
+    "load"     -- request finished successfully
+    "timeout"  -- request timed out
+
+status :: Number
+
+  http status copied from xhr object
+
+ok :: Boolean
+
+  true if `reason` is "load" and `status` is between 200 and 299
+  false otherwise
+
+headers :: Dict String String
+
+  dictionary of response headers
+  all keys are lowercase
+
+body :: Any
+
+  response text
+
+  may be automatically decoded, see Encoding and Parsing
 ```
 
-Success callback. Receives response (parsed from JSON) and XHR object.
+### Encoding and Parsing
 
-### Error
+`xhttp` automatically encodes and decodes some common formats, depending on
+method, request headers, and response headers.
+
+If the method is read-only (GET, HEAD or OPTIONS) and the body is a plain dict,
+it's automatically formdata-encoded and appended to the URL as "search" after
+`?`.
+
+If the method is _not_ read-only:
+
+  * If the headers specify the JSON content type (`application/json`) and the
+    body is a plain dict or list, it's automatically JSON-encoded. Primitives
+    and special objects are passed unchanged.
+
+  * If the headers specify the formdata content type
+    (`application/x-www-form-urlencoded`) and the body is a plain dict, it's
+    automatically formdata-encoded.
+
+If the _response_ headers specify a content type known to `xhttp`, such as JSON,
+`html` or `xml`, it's automatically parsed into the corresponding data
+structure. Otherwise it's returned as a string.
+
+Pay attention to your headers. You may want to write a tiny wrapper to add
+default headers to all your requests.
+
+## API (Secondary)
+
+Internal utils used to implement `Xhr`. Convenient if you want to assemble a
+slightly different version:
 
 ```js
-xhttp(_, _, onError)
+const {xhrInitParams, xhrOpen, xhrSendHeaders, xhrSendBody} = require('xhttp')
 
-function onError (response, xhr) {/* ... */}
+function MyXhr (params) {
+  const xhr = new XMLHttpRequest()
+  // ... custom code here?
+  xhrInitParams(xhr, params)
+  // ... custom code here?
+  xhrSetMultiCallback(xhr, finalCallback)
+  // ... custom code here?
+  xhrOpen(xhr)
+  // ... custom code here?
+  xhrSendHeaders(xhr)
+  // ... custom code here?
+  xhrSendBody(xhr)
+  // ... custom code here?
+  return xhr
+}
 ```
 
-Error callback. Receives response (parsed from JSON) and XHR object.
+### `xhrInitParams(xhr, params)`
+
+Parses `params`, ensuring they're well-formed, and assigns them to `xhr` as
+`xhr.params`. The resulting params are used in other utils, and included as
+part of the eventual result.
+
+### `xhrSetMultiCallback(xhr, fun)`
+
+Attaches `fun` to all four "final" methods of the xhr object: `onabort`,
+`onerror`, `onload`, `ontimeout`. One and only one of them will eventually be
+called when the request is done. `fun` will receive an event telling it what
+happened.
+
+`fun` is attached as-is, without automatic response parsing or forming a
+`Result`. This is useful if you have your own ideas what to do with the
+response.
+
+### `xhrOpen(xhr)`
+
+Must be called after `xhrInitParams`. Opens the request using the `xhr.params`.
+
+### `xhrSendHeaders(xhr)`
+
+Must be called after `xhrOpen`. Sends the headers, previously included as part
+of `xhr.params`.
+
+### `xhrSendBody(xhr)`
+
+Must be called after `xhrSendHeaders`. Sends the body, previously encoded as
+part of `xhr.params`.
+
+### `xhrDestroy(xhr)`
+
+Aborts the request if `xhr` is an `XMLHttpRequest` object. Has no effect
+otherwise. Safe to use on malformed values such as `undefined`.
 
 ## Promises
 
-To get a promise-based API, wrap `xhttp` with your own Promise variant:
+To get a promise-based API, write your own adapter:
 
 ```js
-function ajax (params) {
-  return new Promise((resolve, reject) => {
-    xhttp(params, resolve, reject)
-  })
+const {Xhr} = require('xhttp')
+
+function XhrP (params) {
+  let resolve
+  const wait = new Promise(x => {resolve = x})
+  const xhr = Xhr(params, resolve)
+  xhr.wait = wait
+  return xhr
 }
+
+XhrP({url: '/'}).wait.then(result => {
+  // ...
+})
+```
+
+You can branch into `then/catch` if you want:
+
+```js
+const {Xhr} = require('xhttp')
+
+function XhrP (params) {
+  let resolve
+  let reject
+
+  const wait = new Promise((a, b) => {
+    resolve = a
+    reject = b
+  })
+
+  const xhr = Xhr(params, result => {
+    (result.ok ? resolve : reject)(result)
+  })
+
+  xhr.wait = wait
+  return xhr
+}
+
+XhrP({url: '/'}).wait
+  .then(result => {/* ... */})
+  .catch(result => {/* ... */})
 ```

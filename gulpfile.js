@@ -10,7 +10,7 @@ const {exec} = require('child_process')
 /** ******************************* Globals **********************************/
 
 const src = {
-  lib: 'lib/**/*.js',
+  lib: 'src/**/*.js',
   jsnext: 'dist-jsnext/**/*.js',
   main: 'dist/**/*.js',
 }
@@ -30,16 +30,14 @@ const babelConfigJsNext = {
   plugins: [
     'check-es2015-constants',
     'transform-es2015-arrow-functions',
-    'transform-es2015-block-scoped-functions',
     'transform-es2015-block-scoping',
-    'transform-es2015-destructuring',
+    ['transform-es2015-destructuring', {loose: true}],
     'transform-es2015-function-name',
     'transform-es2015-literals',
     'transform-es2015-parameters',
     'transform-es2015-shorthand-properties',
     ['transform-es2015-spread', {loose: true}],
     'transform-es2015-template-literals',
-    'transform-object-rest-spread',
   ]
 }
 
@@ -77,9 +75,9 @@ gulp.task('minify', () => (
 ))
 
 gulp.task('test', done => {
-  exec(testCommand, (err, stdout, stderr) => {
+  exec(testCommand, (err, stdout) => {
+    // This also contains stderr output.
     process.stdout.write(stdout)
-    process.stderr.write(stderr)
     done(err)
   })
 })
