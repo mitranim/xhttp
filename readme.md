@@ -62,7 +62,7 @@ Many libraries make another big mistake: losing a reference to the underlying
 reference to the HTTP task, masking a rich, manageable reference behind
 ephemeral callbacks. As a result, it lacks such vital features as:
 
-  * progress events
+  * upload progress
   * ability to abort
 
 It has only one real advantage over `XMLHttpRequest`: streaming the response
@@ -92,10 +92,16 @@ const {Xhr} = require('xhttp')
 
 The primary API of this library. Takes configuration [params](#params) and makes
 a request. When the request stops, calls the provided `onDone` function, passing
-
-the final [result](#result), which contain all relevant
+the final [result](#result), which contains all relevant information.
 
 Note: there's no "success" or "failure" callbacks.
+
+```js
+Xhr({url: '/'}, ({ok, headers, body}) => {
+  if (ok) console.info('Success:', body)
+  else console.warn('Failure:', body)
+})
+```
 
 ### Params
 
