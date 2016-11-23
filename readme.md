@@ -94,10 +94,14 @@ The primary API of this library. Takes configuration [params](#params) and makes
 a request. When the request stops, calls the provided `onDone` function, passing
 the final [result](#result), which contains all relevant information.
 
-Note: there's no "success" or "failure" callbacks.
+Returns the newly created xhr object.
+
+Note: there's no "success" or "failure" callbacks. You can branch based on the
+HTTP `status`, the `reason` the request was stopped, or the shorthand `ok` which
+means `reason === 'load'` and `status` between 200 and 299.
 
 ```js
-Xhr({url: '/'}, ({ok, headers, body}) => {
+const xhr = Xhr({url: '/'}, ({ok, status, reason, headers, body}) => {
   if (ok) console.info('Success:', body)
   else console.warn('Failure:', body)
 })
