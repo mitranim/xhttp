@@ -98,7 +98,7 @@ const formdataSendingHeaders = {'content-type': 'application/x-www-form-urlencod
 
 function XhrSync (params) {
   let result
-  return [Xhr(params, x => result = x), result]
+  return [Xhr(params, x => result = x).start(), result]
 }
 
 /**

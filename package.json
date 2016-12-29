@@ -1,11 +1,12 @@
 {
   "name": "xhttp",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Toolkit for XMLHttpRequest",
   "author": "Mitranim <me@mitranim.com>",
   "main": "dist/xhttp.js",
   "jsnext:main": "dist-jsnext/xhttp.js",
   "scripts": {
+    "gulp": "gulp",
     "start": "gulp",
     "test": "node test/test",
     "prepublish": "gulp build && node test/test"

@@ -15,13 +15,14 @@ Small (≈250 LOC) and has no dependencies. Compatible with IE9+.
 * [Why](#why)
 * [Installation](#installation)
 * [API](#api)
-  * [`Xhr`](#xhrparams-ondone---xmlhttprequest)
+  * [`Xhr`](#xhrparams-ondone-)
   * [Params](#params)
   * [Result](#result)
   * [Encoding and Parsing](#encoding-and-parsing)
 * [API (Secondary)](#api-secondary)
   * [`xhrInitParams`](#xhrinitparamsxhr-params)
   * [`xhrSetMultiCallback`](#xhrsetmulticallbackxhr-fun)
+  * [`xhrStart`](#xhrstartxhr)
   * [`xhrOpen`](#xhropenxhr)
   * [`xhrSendHeaders`](#xhrsendheadersxhr)
   * [`xhrSendBody`](#xhrsendbodyxhr)
@@ -40,19 +41,22 @@ mistakes `jQuery.ajax` did:
   * multiple arguments instead of one result
 
 JavaScript forces callbacks for asynchonous actions. This alone is bad enough.
-_Multiple_ callbacks for one action is a recipe for pain and suffering. It
-causes people to invent "finally"-style callbacks just to hack around the fact
-they have branched prematurely. One continuation is better than many; it's never
-too late to branch!
+_Multiple_ callbacks for one action borders on masochism. It causes people to
+invent "finally"-style callbacks just to hack around the fact they have branched
+prematurely. One continuation is better than many; it's never too late to
+branch!
 
 It's common to spread request results over multiple arguments (body, xhr etc.).
-In contrast, bundling it all into a single value (see [Result](#result)) is very
-convenient for further API adaptations. You can easily add a
-[Promise-based](#promises) API and even bolt `async/await` on top of it without
-losing anything.
+In contrast, bundling it all into a single value (see [Result](#result)) is
+convenient for further API adaptations. Adding a [Promise-based](#promises) or
+generator-based API becomes trivial.
 
 Many libraries make another big mistake: losing a reference to the underlying
 `XMLHttpRequest` object, masking it behind callbacks or a promise.
+
+Finally, `xhttp` respects your laziness. It prepares an xhr object and lets
+_you_ "pull the trigger" to start the request. Convenient for building advanced
+network utilities with queueing, deduplication etc.
 
 ### Why not `fetch`?
 
@@ -88,13 +92,14 @@ const {Xhr} = require('xhttp')
 
 ## API
 
-### `Xhr(params, onDone) -> XMLHttpRequest`
+### `Xhr(params, onDone)`
 
-The primary API of this library. Takes configuration [params](#params) and makes
-a request. When the request stops, calls the provided `onDone` function, passing
-the final [result](#result), which contains all relevant information.
+The primary API of this library. Takes configuration [params](#params) and
+returns a fully prepared `XMLHttpRequest` object. The returned instance has one
+extra method: `xhr.start()`. Call it to actually start the request.
 
-Returns the newly created xhr object.
+When the request stops, it calls the provided `onDone` function, passing the
+final [result](#result), which contains all relevant information.
 
 Note: there's no "success" or "failure" callbacks. You can branch based on the
 HTTP `status`, the `reason` the request was stopped, or the shorthand `ok` which
@@ -104,8 +109,12 @@ means `reason === 'load'` and `status` between 200 and 299.
 const xhr = Xhr({url: '/'}, ({ok, status, reason, headers, body}) => {
   if (ok) console.info('Success:', body)
   else console.warn('Failure:', body)
-})
+}).start()
 ```
+
+**Note**: the request is inert until you call `.start()`. You can delay
+requests, batch them together, or even abandon before starting. This is up to
+you.
 
 ### Params
 
@@ -266,6 +275,10 @@ happened.
 `Result`. This is useful if you have your own ideas what to do with the
 response.
 
+### `xhrStart(xhr)`
+
+Combines `xhrOpen`, `xhrSendHeaders`, `xhrSendBody`. See below.
+
 ### `xhrOpen(xhr)`
 
 Must be called after `xhrInitParams`. Opens the request using the `xhr.params`.
@@ -283,7 +296,7 @@ part of `xhr.params`.
 ### `xhrDestroy(xhr)`
 
 Aborts the request if `xhr` is an `XMLHttpRequest` object. Has no effect
-otherwise. Safe to use on malformed values such as `undefined`.
+otherwise. Safe to use on non-xhr values such as `null`. Returns `undefined`.
 
 ## Promises
 

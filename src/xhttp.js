@@ -16,9 +16,7 @@ export function Xhr (params, onDone) {
     if (isFunction(onDone)) onDone(xhr.result)
   })
 
-  xhrOpen(xhr)
-  xhrSendHeaders(xhr)
-  xhrSendBody(xhr)
+  xhr.start = xhrStart.bind(null, xhr)
 
   return xhr
 }
@@ -36,12 +34,20 @@ export function xhrSetMultiCallback (xhr, fun) {
   xhr.onabort = xhr.onerror = xhr.onload = xhr.ontimeout = fun
 }
 
+export function xhrStart (xhr) {
+  xhrOpen(xhr)
+  xhrSendHeaders(xhr)
+  xhrSendBody(xhr)
+  return xhr
+}
+
 export function xhrOpen (xhr) {
   // In some circumstances Chrome may fail to report upload progress. Accessing
   // `.upload` before opening the request magically solves the problem.
   xhr.upload
   const {params: {method, url, async, username, password}} = xhr
   xhr.open(method, url, async, username, password)
+  return xhr
 }
 
 export function xhrSendHeaders (xhr) {
@@ -50,11 +56,13 @@ export function xhrSendHeaders (xhr) {
   for (const key in headers) {
     xhr.setRequestHeader(key, headers[key])
   }
+  return xhr
 }
 
 export function xhrSendBody (xhr) {
   const {params: {body}} = xhr
   xhr.send(body)
+  return xhr
 }
 
 export function xhrDestroy (xhr) {
