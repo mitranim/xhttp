@@ -31,10 +31,9 @@ Small (≈250 LOC) and has no dependencies. Compatible with IE9+.
 
 ## Why
 
-### Why another library?
+### Why bother?
 
-Most HTTP libraries, including earlier versions of this one, make the same
-mistakes `jQuery.ajax` did:
+Most HTTP libraries make the same mistakes `jQuery.ajax` did:
 
   * premature branching into multiple callbacks
   * one huge over-configurable function instead of a toolkit
@@ -43,20 +42,22 @@ mistakes `jQuery.ajax` did:
 JavaScript forces callbacks for asynchonous actions. This alone is bad enough.
 _Multiple_ callbacks for one action borders on masochism. It causes people to
 invent "finally"-style callbacks just to hack around the fact they have branched
-prematurely. One continuation is better than many; it's never too late to
-branch!
+prematurely. `xhttp` uses a single callback. One continuation is better than
+many; it's never too late to branch!
 
-It's common to spread request results over multiple arguments (body, xhr etc.).
-In contrast, bundling it all into a single value (see [Result](#result)) is
+Other libraries spread request results over multiple arguments (body, xhr etc.).
+`xhttp` bundles it all into a single value (see [Result](#result)), which is
 convenient for further API adaptations. Adding a [Promise-based](#promises) or
 generator-based API becomes trivial.
 
 Many libraries make another big mistake: losing a reference to the underlying
-`XMLHttpRequest` object, masking it behind callbacks or a promise.
+`XMLHttpRequest` object, masking it behind callbacks or a promise. `xhttp` keeps
+you in control by never masking the xhr object.
 
-Finally, `xhttp` respects your laziness. It prepares an xhr object and lets
-_you_ "pull the trigger" to start the request. Convenient for building advanced
-network utilities with queueing, deduplication etc.
+Finally, `xhttp` respects your laziness. It prepares an xhr object, adding a
+single, convenient method that start the request. But it lets _you_ "pull the
+trigger". Convenient for building advanced network utilities with queueing,
+deduplication etc.
 
 ### Why not `fetch`?
 
@@ -174,6 +175,17 @@ event :: Event
 params :: Params
 
   see the Params section
+
+complete :: Boolean
+
+  true if the request has finished, aborted, or errored out
+
+  false if the request is still in progress
+  (will never happen with Xhr)
+
+completedAt :: Number
+
+  Unix timestamp of the moment the request had finished
 
 reason :: String
 

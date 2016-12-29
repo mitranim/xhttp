@@ -2,7 +2,7 @@
 
 /* eslint-disable quote-props, quotes, max-len */
 
-const {isFunction} = require('util')
+const {isFunction, isNumber, inspect} = require('util')
 const assert = require('assert')
 const {Xhr} = require(process.cwd())
 
@@ -107,9 +107,25 @@ function XhrSync (params) {
 
 basic_usage: {
   XMLHttpRequest.nextResponse = {status: 200, headers: baseResponseHeaders, text: ''}
+  const now = Date.now()
   const [xhr, result] = XhrSync({url: '/'})
 
   assert(xhr instanceof XMLHttpRequest, `Expected an XMLHttpRequest instance`)
+
+  const resultTemplate = {
+    xhr,
+    // mock event
+    event: {target: xhr, type: 'load'},
+    // parsed params
+    params: {rawParams: {url: '/'}, method: 'GET', url: '/', async: true, headers: {}, body: null},
+    complete: true,
+    completedAt: result.completedAt,
+    reason: 'load',
+    status: 200,
+    ok: true,
+    headers: XMLHttpRequest.nextResponse.headers,
+    body: '',
+  }
 
   assert.deepEqual(
     result,
@@ -120,13 +136,22 @@ basic_usage: {
       // parsed params
       params: {rawParams: {url: '/'}, method: 'GET', url: '/', async: true, headers: {}, body: null},
       complete: true,
+      completedAt: result.completedAt,
       reason: 'load',
       status: 200,
       ok: true,
       headers: XMLHttpRequest.nextResponse.headers,
       body: '',
     },
-    `Expected result to match provided template`
+    `Xhr result failed to match expected template. Expected:
+${format(resultTemplate)}
+Got:
+${format(result)}\n`
+  )
+
+  assert.ok(
+    isNumber(result.completedAt),
+    `Expected result.completedAt to be a timestamp, got: ${format(result.completedAt)}\n`
   )
 }
 
@@ -274,6 +299,10 @@ function merge (...args) {
 
 function assignOne (left, right) {
   return Object.assign(left, right)
+}
+
+function format (value) {
+  return inspect(value, {depth: null})
 }
 
 /**

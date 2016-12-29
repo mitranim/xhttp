@@ -91,13 +91,17 @@ export function parseParams (rawParams) {
 }
 
 export function eventToResult (event) {
+  // Get timestamp before spending time on parsing
+  const completedAt = Date.now()
   const {target: xhr, type: reason} = event
   const complete = xhr.readyState === xhr.DONE
+
   return {
     xhr,
     event,
     params: xhr.params,
     complete,
+    completedAt,
     reason,
     status: xhr.status,
     ok: complete ? isStatusOk(xhr.status) : undefined,

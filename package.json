@@ -1,6 +1,6 @@
 {
   "name": "xhttp",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Toolkit for XMLHttpRequest",
   "author": "Mitranim <me@mitranim.com>",
   "main": "dist/xhttp.js",
