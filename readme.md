@@ -55,7 +55,7 @@ Many libraries make another big mistake: losing a reference to the underlying
 you in control by never masking the xhr object.
 
 Finally, `xhttp` respects your laziness. It prepares an xhr object, adding a
-single, convenient method that start the request. But it lets _you_ "pull the
+single, convenient method that starts the request. But it lets _you_ "pull the
 trigger". Convenient for building advanced network utilities with queueing,
 deduplication etc.
 
