@@ -15,7 +15,7 @@ Small (≈250 LOC) and has no dependencies. Compatible with IE9+.
 * [Why](#why)
 * [Installation](#installation)
 * [API](#api)
-  * [`Xhr`](#xhrparams-ondone-)
+  * [`Xhr`](#xhrparams-ondone)
   * [Params](#params)
   * [Result](#result)
   * [Encoding and Parsing](#encoding-and-parsing)
