@@ -66,7 +66,7 @@ export function xhrSendBody (xhr) {
 }
 
 export function xhrDestroy (xhr) {
-  if (isDict(xhr) && isFunction(xhr.abort)) xhr.abort()
+  if (isObject(xhr) && isFunction(xhr.abort)) xhr.abort()
 }
 
 /**
@@ -83,7 +83,7 @@ export function parseParams (rawParams) {
   return merge(rawParams, {
     rawParams,
     method,
-    async: rawParams.async === false ? false : true,
+    async: rawParams.async !== false,
     url: encodeUrl(rawParams.url, method, rawParams.body),
     headers: isDict(rawParams.headers) ? rawParams.headers : {},
     body: encodeBody(rawParams.body, method, getContentTypeHeader(rawParams.headers)),
