@@ -1,23 +1,15 @@
 /**
- * TODO
- *   shorter function names
- */
-
-/**
  * Shortcuts
  */
 
-export function Xhr (params, onDone) {
+export function Xhr (params) {
   const xhr = new XMLHttpRequest()
   xhrInitParams(xhr, params)
-
-  xhrSetMultiCallback(xhr, function xhrDone (event) {
-    xhr.result = eventToResult(event)
-    if (isFunction(onDone)) onDone(xhr.result)
-  })
-
   xhr.start = xhrStart.bind(null, xhr)
-
+  xhr.done = xhrDone.bind(null, xhr)
+  xhrSetMultiCallback(xhr, function onXhrDone (event) {
+    xhr.result = eventToResult(event)
+  })
   return xhr
 }
 
@@ -29,21 +21,16 @@ export function xhrInitParams (xhr, params) {
   xhr.params = parseParams(params)
 }
 
+// WTB shorter name
 export function xhrSetMultiCallback (xhr, fun) {
   validate(isFunction, fun)
+  // Only one will ever be called.
   xhr.onabort = xhr.onerror = xhr.onload = xhr.ontimeout = fun
 }
 
-export function xhrStart (xhr) {
-  xhrOpen(xhr)
-  xhrSendHeaders(xhr)
-  xhrSendBody(xhr)
-  return xhr
-}
-
 export function xhrOpen (xhr) {
-  // In some circumstances Chrome may fail to report upload progress. Accessing
-  // `.upload` before opening the request magically solves the problem.
+  // In some circumstances Chrome may fail to report upload progress unless you
+  // access `.upload` before opening the request.
   xhr.upload
   const {params: {method, url, async, username, password}} = xhr
   xhr.open(method, url, async, username, password)
@@ -62,6 +49,24 @@ export function xhrSendHeaders (xhr) {
 export function xhrSendBody (xhr) {
   const {params: {body}} = xhr
   xhr.send(body)
+  return xhr
+}
+
+export function xhrStart (xhr) {
+  if (xhr.readyState === xhr.UNSENT || xhr.readyState === xhr.DONE) {
+    xhrOpen(xhr)
+    xhrSendHeaders(xhr)
+    xhrSendBody(xhr)
+  }
+  return xhr
+}
+
+export function xhrDone (xhr, fun) {
+  if (isFunction(fun)) {
+    xhr.addEventListener('loadend', function onXhrDone () {
+      fun.call(xhr, xhr.result)
+    })
+  }
   return xhr
 }
 
@@ -91,7 +96,7 @@ export function parseParams (rawParams) {
 }
 
 export function eventToResult (event) {
-  // Get timestamp before spending time on parsing
+  // Get the timestamp before spending time on parsing
   const completedAt = Date.now()
   const {target: xhr, type: reason} = event
   const complete = xhr.readyState === xhr.DONE

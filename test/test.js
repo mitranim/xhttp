@@ -2,8 +2,9 @@
 
 /* eslint-disable quote-props, quotes, max-len */
 
-const {isFunction, isNumber, inspect} = require('util')
 const assert = require('assert')
+const {inspect} = require('util')
+const {append, isFunction, isString, isNumber, validate} = require('fpx')
 const {Xhr} = require(process.cwd())
 
 /**
@@ -28,7 +29,7 @@ class XMLHttpRequest {
     this.status = 0
     this.responseText = ''
 
-    // Non-standard props
+    // Mock props
     this.params = null
     this.result = null
     this.requestMethod = null
@@ -36,33 +37,39 @@ class XMLHttpRequest {
     this.requestHeaders = {}
     this.requestBody = null
     this.responseHeaders = {}
+    this.listeners = {}
   }
 
   open (method, url) {
     assert.deepEqual(this.readyState, this.UNSENT,
       `Unexpected .open() call in state ${this.readyState}`)
 
-    this.readyState = this.OPENED
     this.requestMethod = method
     this.requestUrl = url
+    this.readyState = this.OPENED
+
+    this.notifyEventListeners({type: 'readystatechange', target: this})
   }
 
   send (body) {
     assert.deepEqual(this.readyState, this.OPENED,
       `Unexpected .send() call in state ${this.readyState}`)
 
-    const {status, reason, headers, text} = XMLHttpRequest.nextResponse
+    const {status, headers, text} = XMLHttpRequest.nextResponse
+    const reason = XMLHttpRequest.nextResponse.reason || 'load'
 
     this.requestBody = body
-    this.readyState = this.DONE
     this.status = status
     this.responseHeaders = headers
     this.responseText = text
+    this.readyState = this.DONE
+    this.notifyEventListeners({type: 'readystatechange', target: this})
 
-    const eventType = reason || 'load'
+    const eventType = reason
     const methodName = 'on' + eventType
-
-    if (isFunction(this[methodName])) this[methodName]({target: this, type: eventType})
+    if (isFunction(this[methodName])) this[methodName]({type: eventType, target: this})
+    this.notifyEventListeners({type: reason, target: this})
+    this.notifyEventListeners({type: 'loadend', target: this})
   }
 
   setRequestHeader (key, value) {
@@ -77,6 +84,16 @@ class XMLHttpRequest {
 
   getAllResponseHeaders () {
     return dictToLines(this.responseHeaders)
+  }
+
+  addEventListener (type, fun) {
+    validate(isString, type)
+    validate(isFunction, fun)
+    this.listeners[type] = append(this.listeners[type], fun)
+  }
+
+  notifyEventListeners (event) {
+    for (const fun of (this.listeners[event.type] || [])) fun.call(this, event)
   }
 }
 
@@ -98,7 +115,7 @@ const formdataSendingHeaders = {'content-type': 'application/x-www-form-urlencod
 
 function XhrSync (params) {
   let result
-  return [Xhr(params, x => result = x).start(), result]
+  return [Xhr(params).done(x => result = x).start(), result]
 }
 
 /**
@@ -107,10 +124,9 @@ function XhrSync (params) {
 
 basic_usage: {
   XMLHttpRequest.nextResponse = {status: 200, headers: baseResponseHeaders, text: ''}
-  const now = Date.now()
   const [xhr, result] = XhrSync({url: '/'})
 
-  assert(xhr instanceof XMLHttpRequest, `Expected an XMLHttpRequest instance`)
+  assert.ok(xhr instanceof XMLHttpRequest, `Expected an XMLHttpRequest instance`)
 
   const resultTemplate = {
     xhr,
