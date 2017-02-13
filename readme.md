@@ -16,7 +16,7 @@ Small (≈250 LOC) and has no dependencies. Compatible with IE9+.
 * [Installation](#installation)
 * [API](#api)
   * [`Xhr`](#xhrparams)
-    * [`xhr.done`](#xhrdone-fun)
+    * [`xhr.done`](#xhrdonefun)
     * [`xhr.start`](#xhrstart)
   * [Params](#params)
   * [Result](#result)
@@ -47,7 +47,7 @@ JavaScript forces callbacks for asynchonous actions. This alone is bad enough.
 _Multiple_ callbacks for one action borders on masochism. It causes people to
 invent "finally"-style callbacks just to hack around the fact they have branched
 prematurely. `xhttp` lets you have a single callback
-(see [`xhr.done`](#xhrdone-fun)). One continuation is better than many;
+(see [`xhr.done`](#xhrdonefun)). One continuation is better than many;
 it's never too late to branch!
 
 Other libraries spread request results over multiple arguments (body, xhr etc.).
@@ -105,7 +105,7 @@ returns a fully prepared `XMLHttpRequest` object.
 
 **Note**: the request is initially inert. The constructor doesn't take callbacks
 as arguments, and it doesn't start the request immediately. Instead, you call
-[`xhr.done`](#xhrdone-fun) to attach the final callback (or several) and
+[`xhr.done`](#xhrdonefun) to attach the final callback (or several) and
 [`xhr.start`](#xhrstart) to begin. This is convenient for building lazy APIs.
 
 ```js
@@ -322,6 +322,7 @@ response.
 ### `xhrStart(xhr)`
 
 Combines `xhrOpen`, `xhrSendHeaders`, `xhrSendBody`. See below.
+`Xhr` assigns this as the [`xhr.start`](#xhrstart) method.
 
 ### `xhrOpen(xhr)`
 
@@ -336,6 +337,10 @@ of `xhr.params`.
 
 Must be called after `xhrSendHeaders`. Sends the body, previously encoded as
 part of `xhr.params`.
+
+### `xhrDone(xhr)`
+
+`Xhr` assigns this as the [`xhr.done`](#xhrdonefun) method.
 
 ### `xhrDestroy(xhr)`
 
@@ -364,12 +369,12 @@ const {Xhr} = require('xhttp')
 function XhrP (params) {
   let resolve
   const wait = new Promise(x => {resolve = x})
-  const xhr = Xhr(params, resolve)
+  const xhr = Xhr(params).done(resolve)
   xhr.wait = wait
   return xhr
 }
 
-XhrP({url: '/'}).wait.then(result => {
+XhrP({url: '/'}).start().wait.then(result => {
   // ...
 })
 ```
@@ -388,7 +393,7 @@ function XhrP (params) {
     reject = b
   })
 
-  const xhr = Xhr(params, result => {
+  const xhr = Xhr(params).done(result => {
     (result.ok ? resolve : reject)(result)
   })
 
@@ -396,7 +401,7 @@ function XhrP (params) {
   return xhr
 }
 
-XhrP({url: '/'}).wait
+XhrP({url: '/'}).start().wait
   .then(result => {/* ... */})
   .catch(result => {/* ... */})
 ```
