@@ -78,12 +78,12 @@ export function xhrDestroy (xhr) {
   if (isObject(xhr) && isFunction(xhr.abort)) xhr.abort()
 }
 
-export function xhrFlushCallbacks (xhr, input) {
+export function xhrFlushCallbacks (xhr, value) {
   try {
-    while (xhr.callbacks.length) xhr.callbacks.shift().call(xhr, input)
+    while (xhr.callbacks.length) xhr.callbacks.shift().call(xhr, value)
   }
   catch (err) {
-    xhrFlushCallbacks(xhr, input)
+    xhrFlushCallbacks(xhr, value)
     throw err
   }
 }

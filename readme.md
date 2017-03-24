@@ -31,7 +31,7 @@ Small (≈250 LOC) and has no dependencies. Compatible with IE9+.
   * [`xhrStart`](#xhrstartxhr)
   * [`xhrOnDone`](#xhrondonexhr-fun)
   * [`xhrDestroy`](#xhrdestroyxhr)
-  * [`xhrFlushCallbacks`](#xhrflushcallbacks)
+  * [`xhrFlushCallbacks`](#xhrflushcallbacksxhr-value)
   * [`eventToResult`](#eventtoresultevent)
 * [Promises](#promises)
 
@@ -161,13 +161,13 @@ See usage examples above.
 
 ### `Xhr(params, fun)`
 
-Basis for `Xhttp`. Takes [params](#params) and a callback, and returns the
-`XMLHttpRequest` instance, modified as described above.
+Basis for [`Xhttp`](#xhttpparams). Takes [params](#params) and a callback, and
+returns the `XMLHttpRequest` instance, modified as described above.
 
 `fun` is attached via [`xhrSetMultiCallback`](#xhrsetmulticallbackxhr-fun). No
 other activity is scheduled, and it's up to `fun` to parse the result (default:
 [`eventToResult`](#eventtoresultevent)) and flush the `xhr.callbacks` attached
-via `.onDone()` (default: [`xhrFlushCallbacks`](#xhrflushcallbacks)).
+via `.onDone()` (default: [`xhrFlushCallbacks`](#xhrflushcallbacksxhr-value)).
 
 Useful when you need precise control over parsing the result or flushing the
 callbacks.
@@ -208,7 +208,8 @@ MyXhr({url: '/'}).onDone(result => {console.info(result)}).start()
 
 ### Params
 
-The configuration dict passed to `Xhttp` must have the following structure.
+The configuration dict passed to [`Xhttp`](#xhttpparams) must have the following
+structure.
 
 ```ml
 url :: String
@@ -337,8 +338,9 @@ default headers to all your requests.
 
 ## API (Secondary)
 
-Internal utils used to implement `Xhttp` and `Xhr`. Convenient if you want to
-assemble a slightly different version:
+Internal utils used to implement [`Xhttp`](#xhttpparams) and
+[`Xhr`](#xhrparams-fun). Convenient if you want to assemble a slightly different
+version:
 
 ```js
 const {xhrInitParams, xhrOpen, xhrSendHeaders, xhrSendBody} = require('xhttp')
@@ -380,7 +382,7 @@ response.
 ### `xhrStart(xhr)`
 
 Combines `xhrOpen`, `xhrSendHeaders`, `xhrSendBody`. See below.
-`Xhr` assigns this as the [`xhr.start`](#xhrstart) method.
+[`Xhr`](#xhrparams-fun) assigns this as the [`xhr.start`](#xhrstart) method.
 
 ### `xhrOpen(xhr)`
 
@@ -398,18 +400,23 @@ part of `xhr.params`.
 
 ### `xhrOnDone(xhr, fun)`
 
-`Xhr` assigns this as the [`xhr.onDone`](#xhrondonefun) method.
+[`Xhr`](#xhrparams-fun) assigns this as the [`xhr.onDone`](#xhrondonefun) method.
 
 ### `xhrDestroy(xhr)`
 
 Aborts the request if `xhr` is an `XMLHttpRequest` object. Has no effect
 otherwise. Safe to use on non-xhr values such as `null`. Returns `undefined`.
 
+### `xhrFlushCallbacks(xhr, value)`
+
+Calls every function previously attached via `xhr.onDone()`, passing `xhr` as
+`this` and `value` as the only argument. Useful with [`Xhr`](#xhrparams-fun).
+
 ### `eventToResult(event)`
 
 Takes an event passed to any `XMLHttpRequest` event listener and parses it into
-a [Result](#result). Used inside `Xhr`. Use it when assembling your own custom
-version of `Xhr`.
+a [Result](#result). Used inside [`Xhr`](#xhrparams-fun). Use it when assembling
+your own custom version of [`Xhr`](#xhrparams-fun).
 
 ```js
 xhrSetMultiCallback(xhr, function onXhrDone (event) {
