@@ -2,14 +2,21 @@
  * Shortcuts
  */
 
-export function Xhr (params) {
+export function Xhttp (params) {
+  return Xhr(params, function onXhrDone (event) {
+    this.result = eventToResult(event)
+    xhrFlushCallbacks(this, this.result)
+  })
+}
+
+export function Xhr (params, fun) {
+  validate(isFunction, fun)
   const xhr = new XMLHttpRequest()
   xhrInitParams(xhr, params)
   xhr.start = xhrStart.bind(null, xhr)
-  xhr.done = xhrDone.bind(null, xhr)
-  xhrSetMultiCallback(xhr, function onXhrDone (event) {
-    xhr.result = eventToResult(event)
-  })
+  xhr.callbacks = []
+  xhr.onDone = xhrOnDone.bind(null, xhr)
+  xhrSetMultiCallback(xhr, fun)
   return xhr
 }
 
@@ -61,12 +68,9 @@ export function xhrStart (xhr) {
   return xhr
 }
 
-export function xhrDone (xhr, fun) {
-  if (isFunction(fun)) {
-    xhr.addEventListener('loadend', function onXhrDone () {
-      fun.call(xhr, xhr.result)
-    })
-  }
+export function xhrOnDone (xhr, fun) {
+  validate(isFunction, fun)
+  if (xhr.status !== xhr.DONE) xhr.callbacks.push(fun)
   return xhr
 }
 
@@ -74,10 +78,34 @@ export function xhrDestroy (xhr) {
   if (isObject(xhr) && isFunction(xhr.abort)) xhr.abort()
 }
 
+export function xhrFlushCallbacks (xhr, input) {
+  try {
+    while (xhr.callbacks.length) xhr.callbacks.shift().call(xhr, input)
+  }
+  catch (err) {
+    xhrFlushCallbacks(xhr, input)
+    throw err
+  }
+}
+
 /**
  * Secondary Utils
  */
 
+// TODO document
+export function xhrGetDecodedResponseBody (xhr) {
+  const type = xhr.getResponseHeader('content-type')
+
+  return /json/.test(type)
+    ? jsonDecode(xhr.responseText)
+    : /html/.test(type)
+    ? new DOMParser().parseFromString(xhr.responseText, 'text/html')
+    : /xml/.test(type)
+    ? new DOMParser().parseFromString(xhr.responseText, 'text/xml')
+    : xhr.responseText
+}
+
+// TODO document
 export function parseParams (rawParams) {
   validate(isDict, rawParams)
   validate(isString, rawParams.url)
@@ -113,18 +141,6 @@ export function eventToResult (event) {
     headers: headersToDict(xhr.getAllResponseHeaders()),
     body: xhrGetDecodedResponseBody(xhr),
   }
-}
-
-export function xhrGetDecodedResponseBody (xhr) {
-  const type = xhr.getResponseHeader('content-type')
-
-  return /json/.test(type)
-    ? jsonDecode(xhr.responseText)
-    : /html/.test(type)
-    ? new DOMParser().parseFromString(xhr.responseText, 'text/html')
-    : /xml/.test(type)
-    ? new DOMParser().parseFromString(xhr.responseText, 'text/xml')
-    : xhr.responseText
 }
 
 function isReadOnly (method) {

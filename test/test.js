@@ -5,7 +5,7 @@
 const assert = require('assert')
 const {inspect} = require('util')
 const {append, isFunction, isString, isNumber, validate} = require('fpx')
-const {Xhr} = require(process.cwd())
+const {Xhttp} = require(process.cwd())
 
 /**
  * Mocks
@@ -115,7 +115,7 @@ const formdataSendingHeaders = {'content-type': 'application/x-www-form-urlencod
 
 function XhrSync (params) {
   let result
-  return [Xhr(params).done(x => result = x).start(), result]
+  return [Xhttp(params).onDone(x => result = x).start(), result]
 }
 
 /**
@@ -159,7 +159,7 @@ basic_usage: {
       headers: XMLHttpRequest.nextResponse.headers,
       body: '',
     },
-    `Xhr result failed to match expected template. Expected:
+    `Xhttp result failed to match expected template. Expected:
 ${format(resultTemplate)}
 Got:
 ${format(result)}\n`

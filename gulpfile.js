@@ -42,7 +42,10 @@ const babelConfigJsNext = {
 }
 
 const babelConfigMain = {
-  plugins: babelConfigJsNext.plugins.concat('transform-es2015-modules-commonjs')
+  plugins: [
+    ...babelConfigJsNext.plugins,
+    'transform-es2015-modules-commonjs',
+  ]
 }
 
 /** ******************************** Tasks ***********************************/
