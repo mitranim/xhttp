@@ -447,7 +447,7 @@ XhrP({url: '/'}).start().wait.then(result => {
 Branch into `then/catch` if you want:
 
 ```js
-const {Xhr} = require('xhttp')
+const {Xhttp} = require('xhttp')
 
 function XhrP (params) {
   let resolve
@@ -458,7 +458,7 @@ function XhrP (params) {
     reject = b
   })
 
-  const xhr = Xhr(params).onDone(result => {
+  const xhr = Xhttp(params).onDone(result => {
     (result.ok ? resolve : reject)(result)
   })
 
