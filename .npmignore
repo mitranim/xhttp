@@ -8,3 +8,4 @@ test
 
 # Build-related files
 gulpfile.js
+yarn.lock

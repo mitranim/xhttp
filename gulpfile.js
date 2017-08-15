@@ -38,14 +38,14 @@ const babelConfigJsNext = {
     'transform-es2015-shorthand-properties',
     ['transform-es2015-spread', {loose: true}],
     'transform-es2015-template-literals',
-  ]
+  ],
 }
 
 const babelConfigMain = {
   plugins: [
     ...babelConfigJsNext.plugins,
     'transform-es2015-modules-commonjs',
-  ]
+  ],
 }
 
 /** ******************************** Tasks ***********************************/
@@ -68,9 +68,13 @@ gulp.task('compile:main', () => (
 
 gulp.task('compile', gulp.parallel('compile:jsnext', 'compile:main'))
 
+// Ensures ES5 compliance and shows minified size
 gulp.task('minify', () => (
   gulp.src(src.main)
-    .pipe($.uglify({mangle: true, compress: {warnings: false, screw_ie8: true}}))
+    .pipe($.uglify({
+      mangle: {toplevel: true},
+      compress: {warnings: false},
+    }))
     .pipe($.rename(path => {
       path.extname = '.min.js'
     }))

@@ -24,7 +24,10 @@ nbproject
 *.sublime-workspace
 .idea
 
-# Folders to ignore
+# Folders
 node_modules
 dist
 dist-jsnext
+
+# Files
+yarn.lock

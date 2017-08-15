@@ -66,7 +66,7 @@ class XMLHttpRequest {
     this.notifyEventListeners({type: 'readystatechange', target: this})
 
     const eventType = reason
-    const methodName = 'on' + eventType
+    const methodName = `on${eventType}`
     if (isFunction(this[methodName])) this[methodName]({type: eventType, target: this})
     this.notifyEventListeners({type: reason, target: this})
     this.notifyEventListeners({type: 'loadend', target: this})
@@ -114,8 +114,8 @@ const jsonSendingHeaders = {'content-type': 'application/json; charset=UTF-8'}
 const formdataSendingHeaders = {'content-type': 'application/x-www-form-urlencoded; charset=UTF-8'}
 
 function XhrSync (params) {
-  let result
-  return [Xhttp(params).onDone(x => result = x).start(), result]
+  let result = null
+  return [Xhttp(params, x => {result = x}), result]
 }
 
 /**

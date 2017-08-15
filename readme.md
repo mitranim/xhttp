@@ -15,9 +15,7 @@ Small (≈250 LOC) and has no dependencies. Compatible with IE9+.
 * [Why](#why)
 * [Installation](#installation)
 * [API](#api)
-  * [`Xhttp`](#xhttpparams)
-    * [`xhr.onDone`](#xhrondonefun)
-    * [`xhr.start`](#xhrstart)
+  * [`Xhttp`](#xhttpparams-fun)
   * [`Xhr`](#xhrparams-fun)
   * [Params](#params)
   * [Result](#result)
@@ -29,9 +27,7 @@ Small (≈250 LOC) and has no dependencies. Compatible with IE9+.
   * [`xhrSendHeaders`](#xhrsendheadersxhr)
   * [`xhrSendBody`](#xhrsendbodyxhr)
   * [`xhrStart`](#xhrstartxhr)
-  * [`xhrOnDone`](#xhrondonexhr-fun)
   * [`xhrDestroy`](#xhrdestroyxhr)
-  * [`xhrFlushCallbacks`](#xhrflushcallbacksxhr-value)
   * [`eventToResult`](#eventtoresultevent)
 * [Promises](#promises)
 
@@ -49,23 +45,18 @@ Most HTTP libraries make the same mistakes `jQuery.ajax` did:
 JavaScript forces callbacks for asynchonous actions. This alone is bad enough.
 _Multiple_ callbacks for one action borders on masochism. It causes people to
 invent "finally"-style callbacks just to hack around the fact they have branched
-prematurely. `xhttp` lets you have a single callback
-(see [`xhr.onDone`](#xhrondonefun)). One continuation is better than many;
-it's never too late to branch!
+prematurely. `xhttp` lets you have a single callback (see
+[`Xhttp`](#xhttpparams-fun)). One continuation is better than many; it's never
+too late to branch!
 
 Other libraries spread request results over multiple arguments (body, xhr etc.).
 `xhttp` bundles it all into a single value (see [Result](#result)), which is
 convenient for further API adaptations. Adding a [Promise-based](#promises) or
-generator-based API becomes trivial.
+[future-based](https://github.com/Mitranim/posterus) API becomes trivial.
 
 Many libraries make another big mistake: losing a reference to the underlying
 `XMLHttpRequest` object, hiding it behind callbacks or a promise. `xhttp` keeps
 you in control by never hiding the xhr object.
-
-Finally, `xhttp` respects your laziness. It prepares an xhr object, adding a
-single, convenient method that starts the request. But it lets _you_ "pull the
-trigger". Convenient for building advanced network utilities with queueing,
-deduplication etc.
 
 ### Why not `fetch`?
 
@@ -99,116 +90,61 @@ const {Xhttp} = require('xhttp')
 
 ## API
 
-### `Xhttp(params)`
+### `Xhttp(params, fun)`
 
 Highest-level API in this library. Takes configuration [params](#params) and
-returns a fully prepared `XMLHttpRequest` object, modified with additional
-properties and methods, listed below.
-
-**Note**: the returned request is **inert**. You must call
-[`xhr.onDone`](#xhrondonefun) to attach the final callback(s) and
-[`xhr.start`](#xhrstart) to begin. Convenient for building lazy APIs.
+a callback, starts the request, and returns the `XMLHttpRequest` object.
 
 Builds on [`Xhr`](#xhrparams-fun) and other utils.
 
 ```js
-const xhr = Xhttp({url: '/'})
-  .onDone(({ok, status, reason, headers, body}) => {
-    if (ok) console.info('Success:', body)
-    else console.warn('Failure:', body)
-  })
-  .start()
+const xhr = Xhttp({url: '/'}, ({ok, status, reason, headers, body}) => {
+  if (ok) console.info('Success:', body)
+  else console.warn('Failure:', body)
+})
 ```
 
-#### `xhr.params`
-
-Parsed version of the [params](#params) passed to the constructor.
-
-#### `xhr.onDone(fun)`
-
-Adds `fun` to `xhr.callbacks` and returns the same `xhr` instance. May be used
-multiple times, attaching several funs.
-
-When the request ends _for any reason_, each callback attached via `xhr.onDone`
-is called with one argument: the [Result](#result) created with
+When the request ends _for any reason_, the callback is called with one
+argument: the [Result](#result) created with
 [`eventToResult`](#eventtoresultevent).
 
 Note: there's no "success" or "failure" callbacks. You can branch based on the
 HTTP `status`, the `reason` the request was stopped, or the shorthand `ok` which
 means `reason === 'load'` and `status` between 200 and 299.
 
-```js
-const xhr = Xhttp({url: '/'})
-  .onDone(result => {
-    console.info('first callback')
-  })
-  .onDone(result => {
-    console.info('second callback')
-  })
-  .onDone(({ok, status, reason, headers, body}) => {
-    if (ok) console.info('Success:', body)
-    else console.warn('Failure:', body)
-  })
-  .start()
-```
+#### `xhr.params`
 
-#### `xhr.start()`
-
-Begins the request. Has no effect if it's already running. Returns the same
-`xhr` instance.
-
-See usage examples above.
+Parsed version of the [params](#params) passed to the constructor.
 
 ### `Xhr(params, fun)`
 
-Basis for [`Xhttp`](#xhttpparams). Takes [params](#params) and a callback, and
-returns the `XMLHttpRequest` instance, modified as described above.
+Basis for [`Xhttp`](#xhttpparams-fun). Takes [params](#params) and a callback,
+starts the request, and returns the `XMLHttpRequest` object. Assigns the parsed
+params as `xhr.params`.
 
 `fun` is attached via [`xhrSetMultiCallback`](#xhrsetmulticallbackxhr-fun). No
 other activity is scheduled, and it's up to `fun` to parse the result (default:
-[`eventToResult`](#eventtoresultevent)) and flush the `xhr.callbacks` attached
-via `.onDone()` (default: [`xhrFlushCallbacks`](#xhrflushcallbacksxhr-value)).
+[`eventToResult`](#eventtoresultevent)).
 
-Useful when you need precise control over parsing the result or flushing the
-callbacks.
+Useful when you need precise control over parsing the result.
 
 Custom parsing:
 
 ```js
-const {Xhr, xhrFlushCallbacks} = require('xhttp')
+const {Xhr} = require('xhttp')
 
-function MyXhr (params) {
+function MyXhr (params, fun) {
   return Xhr(params, function onXhrDone (event) {
-    xhrFlushCallbacks(this, myResultParser(event))
+    fun(myResultParser(event))
   })
 }
 
-MyXhr({url: '/'}).onDone(result => {console.info(result)}).start()
-```
-
-Custom flush:
-
-```js
-const {Xhr, eventToResult, xhrFlushCallbacks} = require('xhttp')
-
-function MyXhr (params) {
-  return Xhr(params, function onXhrDone (event) {
-    somethingImportant.pause()
-    this.result = eventToResult(event)
-    try {
-      xhrFlushCallbacks(this, this.result)
-    } finally {
-      somethingImportant.resume()
-    }
-  })
-}
-
-MyXhr({url: '/'}).onDone(result => {console.info(result)}).start()
+MyXhr({url: '/'}, result => {console.info(result)})
 ```
 
 ### Params
 
-The configuration dict passed to [`Xhttp`](#xhttpparams) must have the following
+The configuration dict passed to [`Xhttp`](#xhttpparams-fun) must have the following
 structure.
 
 ```ml
@@ -250,8 +186,7 @@ password :: String
 
 ### Result
 
-This value is formed when the request ends and is passed to each `xhr.onDone`
-callback.
+This value is formed when the request ends and is passed to the `Xhr` callback.
 
 ```ml
 xhr :: XMLHttpRequest
@@ -338,7 +273,7 @@ default headers to all your requests.
 
 ## API (Secondary)
 
-Internal utils used to implement [`Xhttp`](#xhttpparams) and
+Internal utils used to implement [`Xhttp`](#xhttpparams-fun) and
 [`Xhr`](#xhrparams-fun). Convenient if you want to assemble a slightly different
 version:
 
@@ -382,7 +317,7 @@ response.
 ### `xhrStart(xhr)`
 
 Combines `xhrOpen`, `xhrSendHeaders`, `xhrSendBody`. See below.
-[`Xhr`](#xhrparams-fun) assigns this as the [`xhr.start`](#xhrstart) method.
+[`Xhr`](#xhrparams-fun) calls this automatically.
 
 ### `xhrOpen(xhr)`
 
@@ -398,19 +333,10 @@ of `xhr.params`.
 Must be called after `xhrSendHeaders`. Sends the body, previously encoded as
 part of `xhr.params`.
 
-### `xhrOnDone(xhr, fun)`
-
-[`Xhr`](#xhrparams-fun) assigns this as the [`xhr.onDone`](#xhrondonefun) method.
-
 ### `xhrDestroy(xhr)`
 
 Aborts the request if `xhr` is an `XMLHttpRequest` object. Has no effect
 otherwise. Safe to use on non-xhr values such as `null`. Returns `undefined`.
-
-### `xhrFlushCallbacks(xhr, value)`
-
-Calls every function previously attached via `xhr.onDone()`, passing `xhr` as
-`this` and `value` as the only argument. Useful with [`Xhr`](#xhrparams-fun).
 
 ### `eventToResult(event)`
 
@@ -434,12 +360,12 @@ const {Xhttp} = require('xhttp')
 function XhrP (params) {
   let resolve
   const wait = new Promise(x => {resolve = x})
-  const xhr = Xhttp(params).onDone(resolve)
+  const xhr = Xhttp(params, resolve)
   xhr.wait = wait
   return xhr
 }
 
-XhrP({url: '/'}).start().wait.then(result => {
+XhrP({url: '/'}).wait.then(result => {
   // ...
 })
 ```
@@ -458,7 +384,7 @@ function XhrP (params) {
     reject = b
   })
 
-  const xhr = Xhttp(params).onDone(result => {
+  const xhr = Xhttp(params, result => {
     (result.ok ? resolve : reject)(result)
   })
 
@@ -466,7 +392,7 @@ function XhrP (params) {
   return xhr
 }
 
-XhrP({url: '/'}).start().wait
+XhrP({url: '/'}).wait
   .then(result => {/* ... */})
   .catch(result => {/* ... */})
 ```

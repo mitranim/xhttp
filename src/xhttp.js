@@ -2,10 +2,10 @@
  * Shortcuts
  */
 
-export function Xhttp (params) {
+export function Xhttp (params, fun) {
+  validate(isFunction, fun)
   return Xhr(params, function onXhrDone (event) {
-    this.result = eventToResult(event)
-    xhrFlushCallbacks(this, this.result)
+    fun(eventToResult(event))
   })
 }
 
@@ -13,10 +13,8 @@ export function Xhr (params, fun) {
   validate(isFunction, fun)
   const xhr = new XMLHttpRequest()
   xhrInitParams(xhr, params)
-  xhr.start = xhrStart.bind(null, xhr)
-  xhr.callbacks = []
-  xhr.onDone = xhrOnDone.bind(null, xhr)
   xhrSetMultiCallback(xhr, fun)
+  xhrStart(xhr)
   return xhr
 }
 
@@ -36,9 +34,9 @@ export function xhrSetMultiCallback (xhr, fun) {
 }
 
 export function xhrOpen (xhr) {
-  // In some circumstances Chrome may fail to report upload progress unless you
-  // access `.upload` before opening the request.
-  xhr.upload
+  // In some circumstances Chrome may fail to report upload progress
+  // unless you access `.upload` before opening the request.
+  xhr.upload  // eslint-disable-line no-unused-expressions
   const {params: {method, url, async, username, password}} = xhr
   xhr.open(method, url, async, username, password)
   return xhr
@@ -47,9 +45,7 @@ export function xhrOpen (xhr) {
 export function xhrSendHeaders (xhr) {
   const {params: {headers: rawHeaders}} = xhr
   const headers = pickBy(meaningfulPair, rawHeaders)
-  for (const key in headers) {
-    xhr.setRequestHeader(key, headers[key])
-  }
+  for (const key in headers) xhr.setRequestHeader(key, headers[key])
   return xhr
 }
 
@@ -68,24 +64,8 @@ export function xhrStart (xhr) {
   return xhr
 }
 
-export function xhrOnDone (xhr, fun) {
-  validate(isFunction, fun)
-  if (xhr.status !== xhr.DONE) xhr.callbacks.push(fun)
-  return xhr
-}
-
 export function xhrDestroy (xhr) {
   if (isObject(xhr) && isFunction(xhr.abort)) xhr.abort()
-}
-
-export function xhrFlushCallbacks (xhr, value) {
-  try {
-    while (xhr.callbacks.length) xhr.callbacks.shift().call(xhr, value)
-  }
-  catch (err) {
-    xhrFlushCallbacks(xhr, value)
-    throw err
-  }
 }
 
 /**
@@ -96,13 +76,13 @@ export function xhrFlushCallbacks (xhr, value) {
 export function xhrGetDecodedResponseBody (xhr) {
   const type = xhr.getResponseHeader('content-type')
 
-  return /json/.test(type)
-    ? jsonDecode(xhr.responseText)
+  return /application\/json/.test(type)
+    ? JSON.parse(xhr.responseText)
     : /html/.test(type)
-    ? new DOMParser().parseFromString(xhr.responseText, 'text/html')
-    : /xml/.test(type)
-    ? new DOMParser().parseFromString(xhr.responseText, 'text/xml')
-    : xhr.responseText
+      ? new DOMParser().parseFromString(xhr.responseText, 'text/html')
+      : /xml/.test(type)
+        ? new DOMParser().parseFromString(xhr.responseText, 'text/xml')
+        : xhr.responseText
 }
 
 // TODO document
@@ -157,32 +137,17 @@ function getContentTypeHeader (headers) {
   for (const key in headers) {
     if (/content-type/i.test(key)) return headers[key]
   }
+  return undefined
 }
 
 function encodeBody (body, method, contentType) {
   return isReadOnly(method)
     ? null
     : /application\/json/.test(contentType) && isJSONEncodable(body)
-    ? jsonEncode(body)
-    : /application\/x-www-form-urlencoded/.test(contentType) && isDict(body)
-    ? formdataEncode(body)
-    : body
-}
-
-// Problem:
-//   JSON.stringify(null)       = 'null'
-//   JSON.stringify(undefined)  = undefined
-function jsonEncode (value) {
-  try {return JSON.stringify(value)}
-  catch (_) {return 'null'}
-}
-
-// Problem:
-//   JSON.parse('')                = exception!
-//   JSON.parse(JSON.stringify())  = exception!
-function jsonDecode (value) {
-  try {return JSON.parse(value)}
-  catch (_) {return null}
+      ? JSON.stringify(body)
+      : /application\/x-www-form-urlencoded/.test(contentType) && isDict(body)
+        ? formdataEncode(body)
+        : body
 }
 
 export function isJSONEncodable (value) {
@@ -202,7 +167,7 @@ function formdataEncode (rawDict) {
   const pairs = []
   const dict = pickBy(meaningfulPair, rawDict)
   for (const key in dict) {
-    pairs.push(encodeURIComponent(key) + '=' + encodeURIComponent(dict[key]))
+    pairs.push(`${encodeURIComponent(key)}=${encodeURIComponent(dict[key])}`)
   }
   return pairs.join('&')
 }
