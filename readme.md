@@ -1,4 +1,14 @@
-## Description
+## Overview
+
+`xhttp` is a pair of lightweight libraries for making HTTP requests in Node.js
+and browsers.
+
+**This readme is for the browser library only.** For the Node.js version, see
+[readme-node.md](readme-node.md).
+
+Not isomorphic, at least not yet. Has different APIs for Node and browser.
+
+## Overview: Browser Library
 
 Toolkit for `XMLHttpRequest`, the browser API for making HTTP requests. Makes it
 practical and convenient to use.
@@ -18,7 +28,7 @@ Small (≈250 LOC) and has no dependencies. Compatible with IE9+.
   * [`Xhttp`](#xhttpparams-fun)
   * [`Xhr`](#xhrparams-fun)
   * [Params](#params)
-  * [Result](#result)
+  * [Response](#response)
   * [Encoding and Parsing](#encoding-and-parsing)
 * [API (Secondary)](#api-secondary)
   * [`xhrInitParams`](#xhrinitparamsxhr-params)
@@ -28,7 +38,7 @@ Small (≈250 LOC) and has no dependencies. Compatible with IE9+.
   * [`xhrSendBody`](#xhrsendbodyxhr)
   * [`xhrStart`](#xhrstartxhr)
   * [`xhrDestroy`](#xhrdestroyxhr)
-  * [`eventToResult`](#eventtoresultevent)
+  * [`eventToResponse`](#eventtoresponseevent)
 * [Promises](#promises)
 
 ## Why
@@ -50,7 +60,7 @@ prematurely. `xhttp` lets you have a single callback (see
 too late to branch!
 
 Other libraries spread request results over multiple arguments (body, xhr etc.).
-`xhttp` bundles it all into a single value (see [Result](#result)), which is
+`xhttp` bundles it all into a single value (see [Response](#response)), which is
 convenient for further API adaptations. Adding a [Promise-based](#promises) or
 [future-based](https://github.com/Mitranim/posterus) API becomes trivial.
 
@@ -76,16 +86,14 @@ will probably get bolted on `XMLHttpRequest` some day.
 ## Installation
 
 ```bash
-npm i --save xhttp
-# or
-npm i --save-dev xhttp
+npm install --exact xhttp
 ```
 
-This is a CommonJS-style package. It assumes you're using a package-oriented
-build system such as Webpack or browserify.
+Requires a module bundler such as Webpack or Rollup. Available in ES2015 and
+CommonJS formats.
 
 ```js
-const {Xhttp} = require('xhttp')
+import {Xhttp} from 'xhttp'
 ```
 
 ## API
@@ -105,8 +113,8 @@ const xhr = Xhttp({url: '/'}, ({ok, status, reason, headers, body}) => {
 ```
 
 When the request ends _for any reason_, the callback is called with one
-argument: the [Result](#result) created with
-[`eventToResult`](#eventtoresultevent).
+argument: the [Response](#response) created with
+[`eventToResponse`](#eventtoresponseevent).
 
 Note: there's no "success" or "failure" callbacks. You can branch based on the
 HTTP `status`, the `reason` the request was stopped, or the shorthand `ok` which
@@ -123,10 +131,10 @@ starts the request, and returns the `XMLHttpRequest` object. Assigns the parsed
 params as `xhr.params`.
 
 `fun` is attached via [`xhrSetMultiCallback`](#xhrsetmulticallbackxhr-fun). No
-other activity is scheduled, and it's up to `fun` to parse the result (default:
-[`eventToResult`](#eventtoresultevent)).
+other activity is scheduled, and it's up to `fun` to parse the response
+(default: [`eventToResponse`](#eventtoresponseevent)).
 
-Useful when you need precise control over parsing the result.
+Useful when you need precise control over parsing the response.
 
 Custom parsing:
 
@@ -135,114 +143,78 @@ const {Xhr} = require('xhttp')
 
 function MyXhr (params, fun) {
   return Xhr(params, function onXhrDone (event) {
-    fun(myResultParser(event))
+    fun(myResponseParser(event))
   })
 }
 
-MyXhr({url: '/'}, result => {console.info(result)})
+MyXhr({url: '/'}, response => {console.info(response)})
 ```
 
 ### Params
 
-The configuration dict passed to [`Xhttp`](#xhttpparams-fun) must have the following
-structure.
+The configuration dict passed to [`Xhttp`](#xhttpparams-fun) must have the
+following structure.
 
-```ml
-url :: String
+```ts
+type Params {
+  // Required
+  // For GET and HEAD, body may be appended to url
+  // See Encoding and Parsing
+  url: string,
 
-  required
+  method: ?string,
 
-  `body` may be encoded into `url`, see Encoding and Parsing
+  // May be automatically encoded depending on method and headers
+  // See Encoding and Parsing
+  body: any,
 
-method :: String
+  headers: ?{[string]: string},
 
-  optional
-
-  default = "GET"
-
-body :: Object
-
-  optional
-
-  may be automatically encoded, see Encoding and Parsing
-
-headers :: Object
-
-  optional
-
-async :: Boolean
-
-  optional
-  default = true
-
-username :: String
-
-  optional
-
-password :: String
-
-  optional
+  // Don't touch this
+  async: ?boolean,
+  username: ?string,
+  password: ?string,
+}
 ```
 
-### Result
+### Response
 
 This value is formed when the request ends and is passed to the `Xhr` callback.
 
-```ml
-xhr :: XMLHttpRequest
+```ts
+type Response {
+  // True if `reason === 'load'` and `status` is between 200 and 299
+  ok: boolean,
+  status: number,
+  statusText: string,
 
-  self-explanatory
+  // Response headers; keys are lowercase
+  headers: ?{[string]: string},
 
-event :: Event
+  // Response body, possibly decoded; see Encoding and Parsing
+  body: any,
 
-  corresponds to the type of the event listener (1 of 4)
-  that fired when the request was stopped; see `reason` below
+  // The DOM event passed to the event listener that fired when the request
+  // ended. There are four possible event types. The event type is duplicated
+  // as `reason`, see below.
+  event: Event,
 
-params :: Params
+  // Type of the DOM event that fired when the request was stopped
+  // One of:
+  //   'abort'    -- request was aborted
+  //   'error'    -- network error (dns lookup, loss of connection, etc.)
+  //   'load'     -- request finished successfully
+  //   'timeout'  -- request timed out
+  reason: string,
 
-  see the Params section
+  // Parsed request params
+  params: Params,
 
-complete :: Boolean
+  // Unix timestamp in milliseconds
+  completedAt: number,
 
-  true if the request has finished, aborted, or errored out
-
-  false if the request is still in progress
-  (when calling `eventToResult` manually)
-
-completedAt :: Number
-
-  Unix timestamp of the moment the request had finished
-
-reason :: String
-
-  corresponds to the type of the event listener (1 of 4)
-  that fired when the request was stopped
-
-  one of:
-    "abort"    -- request was aborted
-    "error"    -- network error (dns lookup, loss of connection, etc.)
-    "load"     -- request finished successfully
-    "timeout"  -- request timed out
-
-status :: Number
-
-  http status copied from xhr object
-
-ok :: Boolean
-
-  true if `reason` is "load" and `status` is between 200 and 299
-  false otherwise
-
-headers :: Dict String String
-
-  dictionary of response headers
-  all keys are lowercase
-
-body :: Any
-
-  response text
-
-  may be automatically decoded, see Encoding and Parsing
+  xhr: XMLHttpRequest,
+}
 ```
 
 ### Encoding and Parsing
@@ -301,7 +273,7 @@ function MyXhr (params) {
 
 Parses `params`, ensuring they're well-formed, and assigns them to `xhr` as
 `xhr.params`. The resulting params are used in other utils, and included as
-part of the eventual result.
+part of the eventual response.
 
 ### `xhrSetMultiCallback(xhr, fun)`
 
@@ -311,7 +283,7 @@ called when the request is done. `fun` will receive an event telling it what
 happened.
 
 `fun` is attached as-is, without automatic response parsing or forming a
-`Result`. This is useful if you have your own ideas what to do with the
+`Response`. This is useful if you have your own ideas what to do with the
 response.
 
 ### `xhrStart(xhr)`
@@ -338,15 +310,15 @@ part of `xhr.params`.
 Aborts the request if `xhr` is an `XMLHttpRequest` object. Has no effect
 otherwise. Safe to use on non-xhr values such as `null`. Returns `undefined`.
 
-### `eventToResult(event)`
+### `eventToResponse(event)`
 
 Takes an event passed to any `XMLHttpRequest` event listener and parses it into
-a [Result](#result). Used inside [`Xhr`](#xhrparams-fun). Use it when assembling
+a [Response](#response). Used inside [`Xhr`](#xhrparams-fun). Use it when assembling
 your own custom version of [`Xhr`](#xhrparams-fun).
 
 ```js
 xhrSetMultiCallback(xhr, function onXhrDone (event) {
-  xhr.result = eventToResult(event)
+  xhr.response = eventToResponse(event)
 })
 ```
 
@@ -365,7 +337,7 @@ function XhrP (params) {
   return xhr
 }
 
-XhrP({url: '/'}).wait.then(result => {
+XhrP({url: '/'}).wait.then(response => {
   // ...
 })
 ```
@@ -384,8 +356,8 @@ function XhrP (params) {
     reject = b
   })
 
-  const xhr = Xhttp(params, result => {
-    (result.ok ? resolve : reject)(result)
+  const xhr = Xhttp(params, response => {
+    (response.ok ? resolve : reject)(response)
   })
 
   xhr.wait = wait
@@ -393,6 +365,6 @@ function XhrP (params) {
 }
 
 XhrP({url: '/'}).wait
-  .then(result => {/* ... */})
-  .catch(result => {/* ... */})
+  .then(response => {/* ... */})
+  .catch(response => {/* ... */})
 ```

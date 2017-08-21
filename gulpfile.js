@@ -5,72 +5,43 @@
 const $ = require('gulp-load-plugins')()
 const del = require('del')
 const gulp = require('gulp')
-const {exec} = require('child_process')
+const {spawn} = require('child_process')
 
 /** ******************************* Globals **********************************/
 
-const src = {
-  lib: 'src/**/*.js',
-  jsnext: 'dist-jsnext/**/*.js',
-  main: 'dist/**/*.js',
-}
+const _srcDir = 'src'
+const _libDir = 'lib'
+const esDir = 'es'
+const distDir = 'dist'
+const srcFiles = 'src/**/*.js'
+const libFiles = 'lib/**/*.js'
+const esFiles = 'es/**/*.js'
+const distFiles = 'dist/**/*.js'
+const testFiles = 'test/**/*.js'
 
-const out = {
-  jsnext: 'dist-jsnext',
-  main: 'dist',
-}
-
-const test = 'test/**/*.js'
-
-const testCommand = require('./package').scripts.test
+const [testExecutable, ...testArgs] = require('./package').scripts.test.split(/\s/g)
 
 function noop () {}
 
-const babelConfigJsNext = {
-  plugins: [
-    'check-es2015-constants',
-    'transform-es2015-arrow-functions',
-    'transform-es2015-block-scoping',
-    ['transform-es2015-destructuring', {loose: true}],
-    'transform-es2015-function-name',
-    'transform-es2015-literals',
-    'transform-es2015-parameters',
-    'transform-es2015-shorthand-properties',
-    ['transform-es2015-spread', {loose: true}],
-    'transform-es2015-template-literals',
-  ],
-}
-
-const babelConfigMain = {
-  plugins: [
-    ...babelConfigJsNext.plugins,
-    'transform-es2015-modules-commonjs',
-  ],
-}
+const GulpErr = msg => ({showStack: false, toString: () => msg})
 
 /** ******************************** Tasks ***********************************/
 
 gulp.task('clear', () => (
-  del([out.main, out.jsnext]).catch(noop)
+  del([distFiles, esFiles]).catch(noop)
 ))
 
-gulp.task('compile:jsnext', () => (
-  gulp.src(src.lib)
-    .pipe($.babel(babelConfigJsNext))
-    .pipe(gulp.dest(out.jsnext))
-))
-
-gulp.task('compile:main', () => (
-  gulp.src(src.lib)
-    .pipe($.babel(babelConfigMain))
-    .pipe(gulp.dest(out.main))
-))
-
-gulp.task('compile', gulp.parallel('compile:jsnext', 'compile:main'))
-
-// Ensures ES5 compliance and shows minified size
-gulp.task('minify', () => (
-  gulp.src(src.main)
+gulp.task('compile', () => (
+  gulp.src(srcFiles)
+    .pipe($.babel())
+    .pipe(gulp.dest(esDir))
+    .pipe($.babel({
+      plugins: [
+        'transform-es2015-modules-commonjs',
+      ],
+    }))
+    .pipe(gulp.dest(distDir))
+    // Ensures ES5 compliance and shows minified size
     .pipe($.uglify({
       mangle: {toplevel: true},
       compress: {warnings: false},
@@ -78,22 +49,37 @@ gulp.task('minify', () => (
     .pipe($.rename(path => {
       path.extname = '.min.js'
     }))
-    .pipe(gulp.dest(out.main))
+    .pipe(gulp.dest(distDir))
 ))
 
+let testProc = null
+
 gulp.task('test', done => {
-  exec(testCommand, (err, stdout) => {
-    // This also contains stderr output.
-    process.stdout.write(stdout)
+  // Still running, let it finish
+  if (testProc && testProc.exitCode == null) {
+    done()
+    return
+  }
+
+  testProc = spawn(testExecutable, testArgs)
+  testProc.stdout.pipe(process.stdout)
+  testProc.stderr.pipe(process.stderr)
+
+  testProc.once('error', err => {
+    testProc.kill()
     done(err)
+  })
+
+  testProc.once('exit', code => {
+    done(code ? GulpErr(`Test failed with exit code ${code}`) : null)
   })
 })
 
 gulp.task('watch', () => {
-  $.watch(src.lib, gulp.series('build', 'test'))
-  $.watch(test, gulp.series('test'))
+  $.watch(srcFiles, gulp.series('build', 'test'))
+  $.watch([libFiles, testFiles], gulp.series('test'))
 })
 
-gulp.task('build', gulp.series('clear', 'compile', 'minify'))
+gulp.task('build', gulp.series('clear', 'compile'))
 
 gulp.task('default', gulp.series('build', 'test', 'watch'))

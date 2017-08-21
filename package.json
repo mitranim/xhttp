@@ -1,10 +1,11 @@
 {
   "name": "xhttp",
-  "version": "0.6.0",
-  "description": "Toolkit for XMLHttpRequest",
+  "version": "0.7.0",
+  "description": "Lightweight library for making HTTP requests in Node.js and browsers",
   "author": "Mitranim <me@mitranim.com>",
-  "main": "dist/xhttp.js",
-  "jsnext:main": "dist-jsnext/xhttp.js",
+  "main": "dist/xhttp-browser.js",
+  "module": "es/xhttp-browser.js",
+  "browser": "es/xhttp-browser.js",
   "scripts": {
     "gulp": "gulp",
     "start": "gulp",
@@ -17,11 +18,18 @@
   },
   "license": "MIT",
   "keywords": [
+    "http",
+    "request",
+    "node",
+    "browser",
     "XMLHttpRequest",
     "ajax",
-    "http",
     "xhr"
   ],
+  "dependencies": {
+    "fpx": "^0.3.0",
+    "posterus": "^0.1.0"
+  },
   "devDependencies": {
     "babel-core": "6.25.0",
     "babel-eslint": "7.2.3",
@@ -38,8 +46,7 @@
     "babel-plugin-transform-es2015-template-literals": "6.22.0",
     "del": "3.0.0",
     "eslint-plugin-react": "7.2.1",
-    "eslint_d": "5.1.0",
-    "fpx": "0.2.1",
+    "eslint_d": "4.2.5",
     "gulp": "gulpjs/gulp#4.0",
     "gulp-babel": "7.0.0",
     "gulp-load-plugins": "1.5.0",

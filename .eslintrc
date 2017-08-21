@@ -1,18 +1,13 @@
 {
-  "root": true,
-
   "parser": "babel-eslint",
-
   "parserOptions": {
     "sourceType": "script"
   },
-
   "env": {
     "browser": false,
     "node": true,
     "es6": true
   },
-
   "rules": {
     // Logic
 
@@ -90,15 +85,27 @@
     "require-await": "error",
     "init-declarations": ["error", "always"],
     "no-delete-var": "error",
-    "no-restricted-globals": "error",
+    "no-restricted-globals": ["error",
+      // window (browser)
+      "alert", "blur", "confirm", "event", "fetch", "find", "focus", "history",
+      "length", "location", "name", "navigator", "open", "parent", "print",
+      "prompt", "scroll", "self", "status", "stop", "top",
+      // global (node)
+      "root",
+      // other
+      "test",
+      // These global functions are broken
+      "isNaN", "isFinite"
+    ],
     "no-shadow-restricted-names": "error",
     "no-undef": "error",
-    "no-undef-init": "error",
-    "no-unused-vars": ["error", {"argsIgnorePattern": "^_", "varsIgnorePattern": "^_."}],
+    "no-undef-init": "off",
+    "no-unused-vars": ["error", {"argsIgnorePattern": "^_.", "varsIgnorePattern": "^_."}],
     // "no-use-before-define": ["error", {"functions": false, "classes": false}],
-    "global-require": "off",
+    // "global-require": "error",
     "no-path-concat": "error",
-    "no-bitwise": "error",
+    // "no-bitwise": "error",
+    "strict": ["error", "safe"],
 
     // Style
 
@@ -120,12 +127,12 @@
     "comma-style": "error",
     "computed-property-spacing": "error",
     "func-call-spacing": "error",
-    // "func-names": ["error", "as-needed"],
+    "func-names": ["error", "as-needed"],
     // "func-style": ["error", "declaration"],
     // "id-length": ["error", {"min": 3}],
     "indent": ["error", 2, {"SwitchCase": 1}],
     // "key-spacing": ["error", {"align": "value"}],
-    "key-spacing": "error",
+    // "key-spacing": "error",
     "keyword-spacing": "error",
     "lines-around-comment": "error",
     "lines-around-directive": "error",
@@ -156,7 +163,6 @@
     "space-infix-ops": "error",
     "space-unary-ops": "error",
     "spaced-comment": ["error", "always"],
-    "strict": ["error", "safe"],
     // "arrow-body-style": ["error", "as-needed"],
     "arrow-parens": ["error", "as-needed"],
     "arrow-spacing": "error",
