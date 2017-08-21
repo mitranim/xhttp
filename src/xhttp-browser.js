@@ -5,7 +5,7 @@
 export function Xhttp (params, fun) {
   validate(isFunction, fun)
   return Xhr(params, function onXhrDone (event) {
-    fun(eventToResult(event))
+    fun(eventToResponse(event))
   })
 }
 
@@ -103,7 +103,7 @@ export function parseParams (rawParams) {
   })
 }
 
-export function eventToResult (event) {
+export function eventToResponse (event) {
   // Get the timestamp before spending time on parsing
   const completedAt = Date.now()
   const {target: xhr, type: reason} = event
