@@ -1,6 +1,6 @@
 {
   "name": "xhttp",
-  "version": "0.7.3",
+  "version": "0.7.4",
   "description": "Lightweight library for making HTTP requests in Node.js and browsers",
   "author": "Mitranim <me@mitranim.com>",
   "main": "dist/xhttp-browser.js",
