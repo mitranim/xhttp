@@ -6,12 +6,11 @@ and browsers.
 **This readme is for the browser library only.** For the Node.js version, see
 [readme-node.md](readme-node.md).
 
-Not isomorphic, at least not yet. Has different APIs for Node and browser.
+Not isomorphic, has different APIs for Node and browser.
 
 ## Overview: Browser Library
 
-Toolkit for `XMLHttpRequest`, the browser API for making HTTP requests. Makes it
-practical and convenient to use.
+Toolkit for `XMLHttpRequest`, the browser API for making HTTP requests. Makes it practical and convenient to use.
 
 Difference from other similar libraries:
   * keeps the `XMLHttpRequest` object accessible
