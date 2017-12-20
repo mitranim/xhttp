@@ -110,7 +110,9 @@ function* testHttps() {
 function startServer() {
   const server = createServer(handler)
   server.listen(PORT)
-  process.once('exit', () => {server.close()})
+  function close() {server.close()}
+  process.once('exit', close)
+  server.once('close', () => {process.removeListener('exit', close)})
   return server
 }
 
@@ -137,9 +139,9 @@ function handler(req, res) {
 }
 
 function isInternetAvailable() {
-  return Future.init(future => {
-    lookup('mitranim.com', err => {
-      future.settle(null, !err)
-    })
+  const future = new Future()
+  lookup('mitranim.com', err => {
+    future.settle(null, !err)
   })
+  return future
 }
