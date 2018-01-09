@@ -3,14 +3,14 @@
  */
 
 export function Xhttp (params, fun) {
-  validate(isFunction, fun)
+  validate(fun, isFunction)
   return Xhr(params, function onXhrDone (event) {
     fun(eventToResponse(event))
   })
 }
 
 export function Xhr (params, fun) {
-  validate(isFunction, fun)
+  validate(fun, isFunction)
   const xhr = new XMLHttpRequest()
   xhrInitParams(xhr, params)
   xhrSetMultiCallback(xhr, fun)
@@ -28,7 +28,7 @@ export function xhrInitParams (xhr, params) {
 
 // WTB shorter name
 export function xhrSetMultiCallback (xhr, fun) {
-  validate(isFunction, fun)
+  validate(fun, isFunction)
   // Only one will ever be called.
   xhr.onabort = xhr.onerror = xhr.onload = xhr.ontimeout = fun
 }
@@ -44,7 +44,7 @@ export function xhrOpen (xhr) {
 
 export function xhrSendHeaders (xhr) {
   const {params: {headers: rawHeaders}} = xhr
-  const headers = pickBy(meaningfulPair, rawHeaders)
+  const headers = pickBy(rawHeaders, meaningfulPair)
   for (const key in headers) xhr.setRequestHeader(key, headers[key])
   return xhr
 }
@@ -87,9 +87,9 @@ export function xhrGetDecodedResponseBody (xhr) {
 
 // TODO document
 export function parseParams (rawParams) {
-  validate(isDict, rawParams)
-  validate(isString, rawParams.url)
-  if (rawParams.method) validate(isString, rawParams.method)
+  validate(rawParams, isDict)
+  validate(rawParams.url, isString)
+  if (rawParams.method) validate(rawParams.method, isString)
 
   const method = (rawParams.method || 'GET').toUpperCase()
 
@@ -165,7 +165,7 @@ function appendQuery (url, queryDict) {
 
 function formdataEncode (rawDict) {
   const pairs = []
-  const dict = pickBy(meaningfulPair, rawDict)
+  const dict = pickBy(rawDict, meaningfulPair)
   for (const key in dict) {
     pairs.push(`${encodeURIComponent(key)}=${encodeURIComponent(dict[key])}`)
   }
@@ -217,7 +217,7 @@ function isFunction (value) {
   return typeof value === 'function'
 }
 
-function validate (test, value) {
+function validate (value, test) {
   if (!test(value)) throw Error(`Expected ${value} to satisfy test ${test.name}`)
 }
 
@@ -228,7 +228,7 @@ function merge (left, right) {
   return out
 }
 
-function pickBy (fun, dict) {
+function pickBy (dict, fun) {
   const out = {}
   for (const key in dict) {
     if (fun(dict[key], key)) out[key] = dict[key]

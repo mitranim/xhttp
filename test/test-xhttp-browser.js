@@ -87,8 +87,8 @@ class XMLHttpRequest {
   }
 
   addEventListener (type, fun) {
-    validate(isString, type)
-    validate(isFunction, fun)
+    validate(type, isString)
+    validate(fun, isFunction)
     this.listeners[type] = append(this.listeners[type], fun)
   }
 
