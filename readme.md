@@ -235,9 +235,10 @@ If the method is _not_ read-only:
     (`application/x-www-form-urlencoded`) and the body is a plain dict, it's
     automatically formdata-encoded.
 
-If the _response_ headers specify a content type known to `xhttp`, such as JSON,
-`html` or `xml`, it's automatically parsed into the corresponding data
-structure. Otherwise it's returned as a string.
+If the `content-type` header in the _response_ contains `application/json`, the
+response body is automatically JSON-parsed. Otherwise it's returned as a string.
+(Note: prior to `0.8.0` it also parsed XML and HTML into DOM structures; not
+anymore.)
 
 Pay attention to your headers. You may want to write a tiny wrapper to add
 default headers to all your requests.

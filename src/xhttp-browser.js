@@ -73,16 +73,12 @@ export function xhrDestroy (xhr) {
  */
 
 // TODO document
-export function xhrGetDecodedResponseBody (xhr) {
+export function getParsedResponseBody (xhr) {
   const type = xhr.getResponseHeader('content-type')
 
   return /application\/json/.test(type)
     ? JSON.parse(xhr.responseText)
-    : /html/.test(type)
-      ? new DOMParser().parseFromString(xhr.responseText, 'text/html')
-      : /xml/.test(type)
-        ? new DOMParser().parseFromString(xhr.responseText, 'text/xml')
-        : xhr.responseText
+    : xhr.responseText
 }
 
 // TODO document
@@ -119,7 +115,7 @@ export function eventToResponse (event) {
     status: xhr.status,
     ok: complete ? isStatusOk(xhr.status) : undefined,
     headers: headersToDict(xhr.getAllResponseHeaders()),
-    body: xhrGetDecodedResponseBody(xhr),
+    body: getParsedResponseBody(xhr),
   }
 }
 
