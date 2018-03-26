@@ -155,24 +155,24 @@ The configuration dict passed to [`Xhttp`](#xhttpparams-fun) must have the
 following structure.
 
 ```ts
-type Params {
+interface Params {
   // Required
   // For GET and HEAD, body may be appended to url
   // See Encoding and Parsing
-  url: string,
+  url: string
 
-  method: ?string,
+  method: ?string
 
   // May be automatically encoded depending on method and headers
   // See Encoding and Parsing
-  body: any,
+  body: any
 
-  headers: ?{[string]: string},
+  headers: ?{[string]: string}
 
-  // Don't touch this
-  async: ?boolean,
-  username: ?string,
-  password: ?string,
+  // Don't use this
+  async: ?boolean
+  username: ?string
+  password: ?string
 }
 ```
 
@@ -181,22 +181,22 @@ type Params {
 This value is formed when the request ends and is passed to the `Xhr` callback.
 
 ```ts
-type Response {
+interface Response {
   // True if `reason === 'load'` and `status` is between 200 and 299
-  ok: boolean,
-  status: number,
-  statusText: string,
+  ok: boolean
+  status: number
+  statusText: string
 
-  // Response headers; keys are lowercase
-  headers: ?{[string]: string},
+  // Response headers, with lowercased keys
+  headers: {[string]: string}
 
   // Response body, possibly decoded; see Encoding and Parsing
-  body: any,
+  body: any
 
   // The DOM event passed to the event listener that fired when the request
   // ended. There are four possible event types. The event type is duplicated
   // as `reason`, see below.
-  event: Event,
+  event: Event
 
   // Type of the DOM event that fired when the request was stopped
   // One of:
@@ -204,15 +204,15 @@ type Response {
   //   'error'    -- network error (dns lookup, loss of connection, etc.)
   //   'load'     -- request finished successfully
   //   'timeout'  -- request timed out
-  reason: string,
+  reason: string
 
   // Parsed request params
-  params: Params,
+  params: Params
 
   // Unix timestamp in milliseconds
-  completedAt: number,
+  completedAt: number
 
-  xhr: XMLHttpRequest,
+  xhr: XMLHttpRequest
 }
 ```
 
@@ -368,3 +368,7 @@ XhrP({url: '/'}).wait
   .then(response => {/* ... */})
   .catch(response => {/* ... */})
 ```
+
+## Misc
+
+I'm receptive to suggestions. If this library _almost_ satisfies you but needs changes, open an issue or chat me up. Contacts: https://mitranim.com/#contacts

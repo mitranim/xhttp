@@ -150,12 +150,12 @@ See [Futures](#futures) for explanation.
 Request params format:
 
 ```ts
-type Params {
-  url: string,
-  method: ?string,
-  headers: ?{[string]: string},
-  timeout: ?number,
-  body: ?Stream|Buffer|string,
+interface Params {
+  url: string
+  method: ?string
+  headers: ?{[string]: string}
+  timeout: ?number
+  body: ?Stream|Buffer|string
 }
 ```
 
@@ -164,17 +164,18 @@ type Params {
 Response format:
 
 ```ts
-type Response {
+interface Response {
   // True if status is between 200 and 299
-  ok: boolean,
-  status: string,
-  statusText: string,
+  ok: boolean
+  status: string
+  statusText: string
   // One of: 'load' | 'timeout' | 'aborted'
-  reason: string,
-  headers: ?{[string]: string},
-  stream: ?ReadableStream,
-  body: ?Buffer|string,
-  params: Params,
+  reason: string
+  // Response headers, with lowercased keys
+  headers: {[string]: string}
+  stream: ?ReadableStream
+  body: ?Buffer|string
+  params: Params
 }
 ```
 
@@ -390,5 +391,6 @@ They have other benefits, but if you don't care, that's all you need to know.
 
 ## Misc
 
-The library is new. Might have bugs and edge cases, might be missing some
-common functionality.
+Currently doesn't support redirects. Every time I _thought_ I needed them, turned out I didn't.
+
+I'm receptive to suggestions. If this library _almost_ satisfies you but needs changes, open an issue or chat me up. Contacts: https://mitranim.com/#contacts
