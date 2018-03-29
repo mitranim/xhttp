@@ -104,7 +104,7 @@ function* testJson() {
 
 function* testHttps() {
   const {ok} = yield streamingRequest({url: 'https://mitranim.com'}).mapResult(bufferBody)
-  assert.ok(ok, `Expected HTTP request to succeed`)
+  assert.ok(ok, `Expected HTTPS request to succeed`)
 }
 
 function startServer() {

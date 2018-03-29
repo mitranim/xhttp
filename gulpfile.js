@@ -5,7 +5,9 @@
 const $ = require('gulp-load-plugins')()
 const del = require('del')
 const gulp = require('gulp')
-const {spawn} = require('child_process')
+const log = require('fancy-log')
+const {fork} = require('child_process')
+const {Transform} = require('stream')
 
 /** ******************************* Globals **********************************/
 
@@ -19,16 +21,12 @@ const esFiles = 'es/**/*.js'
 const distFiles = 'dist/**/*.js'
 const testFiles = 'test/**/*.js'
 
-const [testExecutable, ...testArgs] = require('./package').scripts.test.split(/\s/g)
-
-function noop () {}
-
 const GulpErr = msg => ({showStack: false, toString: () => msg})
 
 /** ******************************** Tasks ***********************************/
 
 gulp.task('clear', () => (
-  del([distFiles, esFiles]).catch(noop)
+  del([distFiles, esFiles]).catch(console.error.bind(console))
 ))
 
 gulp.task('compile', () => (
@@ -64,14 +62,7 @@ gulp.task('test', done => {
     return
   }
 
-  testProc = spawn(testExecutable, testArgs)
-  testProc.stdout.pipe(process.stdout)
-  testProc.stderr.pipe(process.stderr)
-
-  testProc.once('error', err => {
-    testProc.kill()
-    done(err)
-  })
+  testProc = fork('./test/test')
 
   testProc.once('exit', code => {
     done(code ? GulpErr(`Test failed with exit code ${code}`) : null)
@@ -83,6 +74,6 @@ gulp.task('watch', () => {
   $.watch([libFiles, testFiles], gulp.series('test'))
 })
 
-gulp.task('build', gulp.series('clear', 'compile'))
+gulp.task('build', gulp.series('clear', 'compile', 'test'))
 
-gulp.task('default', gulp.series('build', 'test', 'watch'))
+gulp.task('default', gulp.series('build', 'watch'))
