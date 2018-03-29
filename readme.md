@@ -38,6 +38,7 @@ Small (≈250 LOC) and has no dependencies. Compatible with IE9+.
   * [`xhrStart`](#xhrstartxhr)
   * [`xhrDestroy`](#xhrdestroyxhr)
   * [`eventToResponse`](#eventtoresponseevent)
+* [Cancelation](#cancelation)
 * [Promises](#promises)
 
 ## Why
@@ -307,8 +308,14 @@ part of `xhr.params`.
 
 ### `xhrDestroy(xhr)`
 
-Aborts the request if `xhr` is an `XMLHttpRequest` object. Has no effect
-otherwise. Safe to use on non-xhr values such as `null`. Returns `undefined`.
+Request cancelation. Same as `xhr.abort()`, but safe to call on `null`, `undefined` or other nonsense values.
+
+```js
+const xhr = xhttp.Xhttp({url: '/'}, response => {})
+// Equivalent
+xhr.abort()
+xhttp.xhrDestroy(xhr)
+```
 
 ### `eventToResponse(event)`
 
@@ -320,6 +327,25 @@ your own custom version of [`Xhr`](#xhrparams-fun).
 xhrSetMultiCallback(xhr, function onXhrDone (event) {
   xhr.response = eventToResponse(event)
 })
+```
+
+## Cancelation
+
+`XMLHttpRequest` can be canceled by calling `.abort()`:
+
+```js
+const xhr = new XMLHttpRequest()
+xhr.open('get', '/')
+xhr.send()
+xhr.abort()
+```
+
+`Xhttp` also attaches an `onabort` event listener. To abort silently, remove it first:
+
+```js
+const xhr = xhttp.Xhttp({url: '/'}, response => {})
+xhr.onabort = null
+xhr.abort()
 ```
 
 ## Promises
@@ -345,9 +371,9 @@ XhrP({url: '/'}).wait.then(response => {
 Branch into `then/catch` if you want:
 
 ```js
-const {Xhttp} = require('xhttp')
+import * as xhttp from 'xhttp'
 
-function XhrP (params) {
+export function httpRequest(params) {
   let resolve
   let reject
 
@@ -356,17 +382,43 @@ function XhrP (params) {
     reject = b
   })
 
-  const xhr = Xhttp(params, response => {
+  const xhr = xhttp.Xhttp(params, response => {
     (response.ok ? resolve : reject)(response)
   })
-
   xhr.wait = wait
   return xhr
 }
 
-XhrP({url: '/'}).wait
+httpRequest({url: '/'}).wait
   .then(response => {/* ... */})
   .catch(response => {/* ... */})
+```
+
+If you want promises with cancelation, consider `Posterus` futures:
+
+```js
+import * as xhttp from 'xhttp'
+import {Future} from 'posterus'
+
+export function httpRequest(params) {
+  const future = new Future()
+  const xhr = xhttp.Xhttp(params, response => {
+    if (response.ok) future.settle(null, response)
+    else future.settle(response)
+  })
+  return future.finally(error => {
+    if (error) {
+      xhr.onabort = null
+      xhr.abort()
+    }
+  })
+}
+
+httpRequest(params)
+  .mapResult(response => {/* ... */})
+  .mapError(error => {/* ... */})
+  // abort
+  .deinit()
 ```
 
 ## Misc
