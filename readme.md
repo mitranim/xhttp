@@ -394,7 +394,7 @@ httpRequest({url: '/'}).wait
   .catch(response => {/* ... */})
 ```
 
-If you want promises with cancelation, consider `Posterus` futures:
+If you want promises with cancelation, consider futures from the [Posterus library](https://github.com/Mitranim/posterus):
 
 ```js
 import * as xhttp from 'xhttp'
