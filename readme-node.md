@@ -6,7 +6,7 @@ and browsers.
 **This readme is for the Node library only.** For the browser version, see
 [readme.md](readme.md).
 
-Not isomorphic, has different APIs for Node and browser.
+Not isomorphic: has different APIs for Node and browsers.
 
 ## Overview: Node Library
 
@@ -30,11 +30,12 @@ more lightweight than the popular alternatives.
   * [`okErr`](#okerrresponse)
   * [`isResponse`](#isresponsevalue)
 * [Futures](#futures)
+* [Changelog](#changelog)
 * [Misc](#misc)
 
 ## Why
 
-* Lightweight: ≈250+ LOC, very minimal dependencies
+* Lightweight: <300 LOC, very minimal dependencies
 * Convenient:
   * has a convenient high level API
   * avoids callbacks and events, provides a promise/future API
@@ -125,12 +126,12 @@ buffer or coerce responses:
 const {streamingRequest} = require('xhttp/node')
 
 async function main() {
-  const {ok, status, statusText, headers, stream} = await streamingRequest({
+  const {ok, status, statusText, headers, body} = await streamingRequest({
     url: '<some url>',
     method: 'POST',
     body: fs.createReadStream('<data file>'),
   })
-  stream.pipe(process.stdout)
+  body.pipe(process.stdout)
 }
 ```
 
@@ -173,17 +174,14 @@ interface Response {
   reason: string
   // Response headers, with lowercased keys
   headers: {[string]: string}
-  stream: ?ReadableStream
-  body: ?Buffer|string
+  body: ?(ReadableStream|Buffer|string)
   params: Params
 }
 ```
 
-`streamingRequest` resolves to a Response with the Node.js response object as
-`.stream`.
+`streamingRequest` resolves to a Response where `.body` is a Node readable stream.
 
-`bufferedRequest`, `httpRequest`, `jsonRequest`, and `bufferBody` resolve to a
-response with the buffered body as `.body`.
+`bufferedRequest`, `httpRequest`, `jsonRequest`, and `bufferBody` resolve to a Response where `.body` is a fully realized `Buffer` or string.
 
 ### `httpRequest(params)`
 
@@ -283,8 +281,7 @@ function bufferedRequest(params) {
 ### `streamingRequest(params)`
 
 Core API. Takes [Params](#request-params) and returns a [future](#futures) that
-eventually resolves to a [Response](#response) that contains the Node.js
-response as `.stream`.
+eventually resolves to a [Response](#response) where `.body` is a Node readable stream.
 
 Will automatically handle request and response lifecycles, which are normally a
 pain to get right.
@@ -301,11 +298,11 @@ Basic usage:
 const {streamingRequest} = require('xhttp/node')
 
 async function main() {
-  const {ok, status, statusText, headers, stream} = await streamingRequest({
+  const {ok, status, statusText, headers, body} = await streamingRequest({
     url: '<some url>',
     body: fs.createReadStream('<data file>'),
   })
-  stream.pipe(process.stdout)
+  body.pipe(process.stdout)
 }
 ```
 
@@ -318,17 +315,16 @@ req.deinit()
 
 ### `bufferBody(response)`
 
-Takes a [Response](#response) returned by `streamingRequest` and returns a
-future that eventually resolves to a Response that contains the response, fully
-buffered into a `Buffer`, as `.body`. Using `.setEncoding()` on the Node
-response stream causes it to be buffered as a string.
+Takes a [Response](#response) returned by `streamingRequest` and returns a future that eventually resolves to a Response where `.body` is a fully realized `Buffer` rather than a stream. Using `.setEncoding()` on the readable stream before buffering causes it to be buffered as a string using the given encoding.
 
 ```js
 const {streamingRequest, bufferBody} = require('xhttp/node')
 
-streamingRequest(params).mapResult(bufferBody).mapResult(response => {
-  const {ok, status, statusText, headers, body} = response
-})
+streamingRequest(params)
+  .mapResult(bufferBody)
+  .mapResult(response => {
+    const {ok, status, statusText, headers, body} = response
+  })
 ```
 
 ### `stringifyBody(response)`
@@ -339,9 +335,12 @@ to a string.
 ```js
 const {streamingRequest, bufferBody, stringifyBody} = require('xhttp/node')
 
-streamingRequest(params).mapResult(bufferBody).mapResult(stringifyBody).mapResult(response => {
-  const {ok, status, statusText, headers, body} = response
-})
+streamingRequest(params)
+  .mapResult(bufferBody)
+  .mapResult(stringifyBody)
+  .mapResult(response => {
+    const {ok, status, statusText, headers, body} = response
+  })
 ```
 
 ### `okErr(response)`
@@ -353,13 +352,15 @@ The resulting `HttpError` contains the original response as `error.response`.
 ```js
 const {streamingRequest, okErr, HttpError} = require('xhttp/node')
 
-streamingRequest(params).mapResult(okErr).map((error, response) => {
-  if (error instanceof HttpError) {
-    const {ok, status, statusText, headers, body} = error.response
-  }
-  else if (error) console.error(error)
-  else console.info(response)
-})
+streamingRequest(params)
+  .mapResult(okErr)
+  .map((error, response) => {
+    if (error instanceof HttpError) {
+      const {ok, status, statusText, headers, body} = error.response
+    }
+    else if (error) console.error(error)
+    else console.info(response)
+  })
 ```
 
 ### `isResponse(value)`
@@ -388,6 +389,16 @@ req.deinit()
 ```
 
 They have other benefits, but if you don't care, that's all you need to know.
+
+## Changelog
+
+### 0.8.0 → 0.9.0
+
+Breaking: `Response` no longer has a `.stream` property; in a streaming response, the `.body` is a stream.
+
+`bufferBody` and `stringifyBody` now work on anything with a `.body` and don't require the full `Response` structure.
+
+`bufferBody` consistently returns a future.
 
 ## Misc
 

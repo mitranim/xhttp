@@ -1,106 +1,86 @@
 /**
- * Shortcuts
+ * Public
  */
 
-export function Xhttp (params, fun) {
-  validate(fun, isFunction)
-  return Xhr(params, function onXhrDone (event) {
-    fun(eventToResponse(event))
-  })
-}
-
-export function Xhr (params, fun) {
+export function Xhttp(params, fun) {
+  validate(params, isDict)
   validate(fun, isFunction)
   const xhr = new XMLHttpRequest()
-  xhrInitParams(xhr, params)
-  xhrSetMultiCallback(xhr, fun)
-  xhrStart(xhr)
+  start(xhr, transformParams(params), function onXhrDone(event) {
+    const response = eventToResponse(event)
+    response.body = getResponseBody(xhr)
+    fun(response)
+  })
   return xhr
 }
 
-/**
- * Primary Utils
- */
+export function transformParams(params) {
+  validate(params, isDict)
+  validate(params.url, isString)
+  if (params.method) validate(params.method, isString)
+  const method = (params.method || 'GET').toUpperCase()
 
-export function xhrInitParams (xhr, params) {
-  xhr.params = parseParams(params)
+  return patch(params, {
+    rawParams: params,
+    method,
+    url: encodeUrl(params.url, method, params.body),
+    headers: isDict(params.headers) ? params.headers : {},
+    body: encodeBody(params.body, method, findContentType(params.headers)),
+  })
 }
 
-// WTB shorter name
-export function xhrSetMultiCallback (xhr, fun) {
+export function start(xhr, params, fun) {
+  validate(params, isDict)
   validate(fun, isFunction)
-  // Only one will ever be called.
+  if (xhr.readyState === xhr.UNSENT || xhr.readyState === xhr.DONE) {
+    setCallback(xhr, fun)
+    open(xhr, params)
+    sendHeaders(xhr, params)
+    sendBody(xhr, params)
+  }
+}
+
+export function setCallback(xhr, fun) {
+  validate(fun, isFunction)
+  // Only one will be called
   xhr.onabort = xhr.onerror = xhr.onload = xhr.ontimeout = fun
 }
 
-export function xhrOpen (xhr) {
+export function open(xhr, {method, url, username, password}) {
   // In some circumstances Chrome may fail to report upload progress
   // unless you access `.upload` before opening the request.
   xhr.upload  // eslint-disable-line no-unused-expressions
-  const {params: {method, url, async, username, password}} = xhr
-  xhr.open(method, url, async, username, password)
-  return xhr
+  xhr.open(method, url, true, username, password)
 }
 
-export function xhrSendHeaders (xhr) {
-  const {params: {headers: rawHeaders}} = xhr
-  const headers = pickBy(rawHeaders, meaningfulPair)
-  for (const key in headers) xhr.setRequestHeader(key, headers[key])
-  return xhr
-}
-
-export function xhrSendBody (xhr) {
-  const {params: {body}} = xhr
-  xhr.send(body)
-  return xhr
-}
-
-export function xhrStart (xhr) {
-  if (xhr.readyState === xhr.UNSENT || xhr.readyState === xhr.DONE) {
-    xhrOpen(xhr)
-    xhrSendHeaders(xhr)
-    xhrSendBody(xhr)
+export function sendHeaders(xhr, {headers}) {
+  if (headers) {
+    for (const key in headers) {
+      const value = headers[key]
+      if (key && value) xhr.setRequestHeader(key, value)
+    }
   }
-  return xhr
 }
 
-export function xhrDestroy (xhr) {
-  if (isObject(xhr) && isFunction(xhr.abort)) xhr.abort()
+export function sendBody(xhr, {body}) {
+  xhr.send(body)
 }
 
-/**
- * Secondary Utils
- */
-
-// TODO document
-export function getParsedResponseBody (xhr) {
-  const type = xhr.getResponseHeader('content-type')
-
-  return /application\/json/.test(type)
-    ? JSON.parse(xhr.responseText)
-    : xhr.responseText
+export function abort(xhr) {
+  if (isObject(xhr) && isFunction(xhr.abort)) {
+    xhr.abort()
+  }
 }
 
-// TODO document
-export function parseParams (rawParams) {
-  validate(rawParams, isDict)
-  validate(rawParams.url, isString)
-  if (rawParams.method) validate(rawParams.method, isString)
-
-  const method = (rawParams.method || 'GET').toUpperCase()
-
-  return merge(rawParams, {
-    rawParams,
-    method,
-    async: rawParams.async !== false,
-    url: encodeUrl(rawParams.url, method, rawParams.body),
-    headers: isDict(rawParams.headers) ? rawParams.headers : {},
-    body: encodeBody(rawParams.body, method, getContentTypeHeader(rawParams.headers)),
-  })
+export function abortSilently(xhr) {
+  if (isObject(xhr) && isFunction(xhr.abort)) {
+    if (xhr.onabort) xhr.onabort = null
+    xhr.abort()
+  }
 }
 
-export function eventToResponse (event) {
-  // Get the timestamp before spending time on parsing
+export function eventToResponse(event) {
+  // Get current time before spending time on other actions
   const completedAt = Date.now()
   const {target: xhr, type: reason} = event
   const complete = xhr.readyState === xhr.DONE
@@ -108,134 +88,130 @@ export function eventToResponse (event) {
   return {
     xhr,
     event,
-    params: xhr.params,
     complete,
     completedAt,
     reason,
     status: xhr.status,
+    statusText: xhr.statusText,
     ok: complete ? isStatusOk(xhr.status) : undefined,
-    headers: headersToDict(xhr.getAllResponseHeaders()),
-    body: getParsedResponseBody(xhr),
+    headers: headerLinesToDict(xhr.getAllResponseHeaders()),
   }
 }
 
-function isReadOnly (method) {
-  return /get|head|options/i.test(method)
+export function getResponseBody(xhr) {
+  const type = xhr.getResponseHeader('content-type')
+  return /application\/json/.test(type)
+    ? JSON.parse(xhr.responseText)
+    : xhr.responseText
 }
 
-function encodeUrl (url, method, body) {
+/**
+ * Internal
+ */
+
+function isReadOnly(method) {
+  return /GET|HEAD|OPTIONS/i.test(method)
+}
+
+function encodeUrl(url, method, body) {
   return isReadOnly(method) && isDict(body)
     ? appendQuery(url, body)
     : url
 }
 
-function getContentTypeHeader (headers) {
+function findContentType(headers) {
   for (const key in headers) {
     if (/content-type/i.test(key)) return headers[key]
   }
   return undefined
 }
 
-function encodeBody (body, method, contentType) {
+function encodeBody(body, method, contentType) {
   return isReadOnly(method)
     ? null
-    : /application\/json/.test(contentType) && isJSONEncodable(body)
-      ? JSON.stringify(body)
-      : /application\/x-www-form-urlencoded/.test(contentType) && isDict(body)
-        ? formdataEncode(body)
-        : body
+    : /application\/json/i.test(contentType) && isJSONEncodable(body)
+    ? JSON.stringify(body)
+    : /application\/x-www-form-urlencoded/i.test(contentType) && isDict(body)
+    ? formdataEncode(body)
+    : body
 }
 
-export function isJSONEncodable (value) {
+export function isJSONEncodable(value) {
   return isDict(value) || isArray(value)
 }
 
-export function isStatusOk (status) {
+export function isStatusOk(status) {
   return status >= 200 && status <= 299
 }
 
-function appendQuery (url, queryDict) {
+function appendQuery(url, queryDict) {
   const search = formdataEncode(queryDict)
-  return !search ? url : `${url}${/\?/.test(url) ? '&' : '?'}${search}`
+  return !search
+    ? url
+    : /\?/.test(url)
+    ? `${url}&${search}`
+    : `${url}?${search}`
 }
 
-function formdataEncode (rawDict) {
+export function formdataEncode(dict) {
   const pairs = []
-  const dict = pickBy(rawDict, meaningfulPair)
-  for (const key in dict) {
-    pairs.push(`${encodeURIComponent(key)}=${encodeURIComponent(dict[key])}`)
+  if (isDict(dict)) {
+    for (const key in dict) {
+      const value = dict[key]
+      if (key && value != null && value !== '') {
+        pairs.push(`${encodeURIComponent(key)}=${encodeURIComponent(value)}`)
+      }
+    }
   }
   return pairs.join('&')
 }
 
-export function headersToDict (headersString) {
-  const headerDict = {}
-
-  splitLines(headersString)
-    .map(splitHeader)
-    .filter(Boolean)
-    .forEach(([_header, key, value]) => {
-      headerDict[key.toLowerCase()] = value
-    })
-
-  return headerDict
-}
-
-function splitLines (string) {
-  return string.split(/$/m)
-}
-
-function splitHeader (headerString) {
-  return headerString.match(/^\s*([^:]+)\s*:\s*(.+)\s*$/m)
-}
-
-function isObject (value) {
-  return value !== null && typeof value === 'object'
-}
-
-function isDict (value) {
-  return isObject(value) && isPlainPrototype(Object.getPrototypeOf(value))
-}
-
-function isPlainPrototype (value) {
-  return value === null || value === Object.prototype
-}
-
-function isArray (value) {
-  return value instanceof Array
-}
-
-function isString (value) {
-  return typeof value === 'string'
-}
-
-function isFunction (value) {
-  return typeof value === 'function'
-}
-
-function validate (value, test) {
-  if (!test(value)) throw Error(`Expected ${value} to satisfy test ${test.name}`)
-}
-
-function merge (left, right) {
+export function headerLinesToDict(headerLines) {
   const out = {}
-  for (const key in left) out[key] = left[key]
-  for (const key in right) out[key] = right[key]
-  return out
-}
-
-function pickBy (dict, fun) {
-  const out = {}
-  for (const key in dict) {
-    if (fun(dict[key], key)) out[key] = dict[key]
+  const lines = headerLines.split(/$/m)
+  for (let i = -1; ++i < lines.length;) {
+    const match = lines[i].match(/^\s*([^:]+)\s*:\s*(.+)\s*$/m)
+    if (!match) continue
+    const key = match[1].toLowerCase()
+    const value = match[2]
+    // Overrides repeating headers instead of grouping them.
+    // Unsure which behavior is more practical.
+    out[key] = value
   }
   return out
 }
 
-function meaningfulPair (left, right) {
-  return meaningful(left) && meaningful(right)
+function isObject(value) {
+  return value !== null && typeof value === 'object'
 }
 
-function meaningful (value) {
-  return value != null && value !== ''
+function isDict(value) {
+  return isObject(value) && isPlainPrototype(Object.getPrototypeOf(value))
+}
+
+function isPlainPrototype(value) {
+  return value === null || value === Object.prototype
+}
+
+function isArray(value) {
+  return value instanceof Array
+}
+
+function isString(value) {
+  return typeof value === 'string'
+}
+
+function isFunction(value) {
+  return typeof value === 'function'
+}
+
+function validate(value, test) {
+  if (!test(value)) throw Error(`Expected ${value} to satisfy test ${test.name}`)
+}
+
+function patch(left, right) {
+  const out = {}
+  if (left) for (const key in left) out[key] = left[key]
+  if (right) for (const key in right) out[key] = right[key]
+  return out
 }

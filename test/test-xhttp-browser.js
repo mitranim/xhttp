@@ -27,6 +27,7 @@ class XMLHttpRequest {
     this.onload = null
 
     this.status = 0
+    this.statusText = ''
     this.responseText = ''
 
     // Non-standard property set by xhttp
@@ -63,15 +64,17 @@ class XMLHttpRequest {
 
     this.mock.request.body = body
 
-    const {status, headers, text} = XMLHttpRequest.nextResponse
-    const reason = XMLHttpRequest.nextResponse.reason || 'load'
+    const {nextResponse} = XMLHttpRequest
 
-    this.status = status
-    this.mock.response.headers = headers
-    this.responseText = text
+    this.status = nextResponse.status
+    this.statusText = nextResponse.statusText
+    this.mock.response.headers = nextResponse.headers
+    this.response = nextResponse.body
+    this.responseText = nextResponse.body
     this.readyState = this.DONE
     this.dispatchEvent({type: 'readystatechange', target: this})
 
+    const reason = nextResponse.reason || 'load'
     const eventType = reason
     const methodName = `on${eventType}`
     if (f.isFunction(this[methodName])) this[methodName]({type: eventType, target: this})
@@ -131,7 +134,12 @@ function runXhrSync(params) {
  */
 
 basic_usage: {
-  XMLHttpRequest.nextResponse = {status: 200, headers: baseResponseHeaders, text: ''}
+  XMLHttpRequest.nextResponse = {
+    status: 200,
+    statusText: 'OK',
+    headers: baseResponseHeaders,
+    body: '',
+  }
   const [xhr, result] = runXhrSync({url: '/'})
 
   assert.ok(xhr instanceof XMLHttpRequest, `Expected an XMLHttpRequest instance`)
@@ -141,37 +149,24 @@ basic_usage: {
     // mock event
     event: {target: xhr, type: 'load'},
     // parsed params
-    params: {rawParams: {url: '/'}, method: 'GET', url: '/', async: true, headers: {}, body: null},
+    // params: {rawParams: {url: '/'}, method: 'GET', url: '/', async: true, headers: {}, body: null},
     complete: true,
     completedAt: result.completedAt,
     reason: 'load',
     status: 200,
+    statusText: 'OK',
     ok: true,
     headers: XMLHttpRequest.nextResponse.headers,
     body: '',
   }
 
-  assert.deepEqual(
-    result,
-    {
-      xhr,
-      // mock event
-      event: {target: xhr, type: 'load'},
-      // parsed params
-      params: {rawParams: {url: '/'}, method: 'GET', url: '/', async: true, headers: {}, body: null},
-      complete: true,
-      completedAt: result.completedAt,
-      reason: 'load',
-      status: 200,
-      ok: true,
-      headers: XMLHttpRequest.nextResponse.headers,
-      body: '',
-    },
-    `Xhttp result failed to match expected template. Expected:
-${show(resultTemplate)}
+  assert.deepEqual(result, resultTemplate,
+`Xhttp result failed to match expected template.
 Got:
-${show(result)}\n`
-  )
+${show(result)}
+Expected:
+${show(resultTemplate)}
+`)
 
   assert.ok(
     f.isNatural(result.completedAt),
@@ -180,7 +175,12 @@ ${show(result)}\n`
 }
 
 passthrough_request_body: {
-  XMLHttpRequest.nextResponse = {status: 200, headers: baseResponseHeaders, text: ''}
+  XMLHttpRequest.nextResponse = {
+    status: 200,
+    statusText: 'OK',
+    headers: baseResponseHeaders,
+    body: '',
+  }
   const [{mock: {request}}] = runXhrSync({
     url: '/',
     method: 'post',
@@ -190,7 +190,12 @@ passthrough_request_body: {
 }
 
 encode_request_body_json: {
-  XMLHttpRequest.nextResponse = {status: 200, headers: baseResponseHeaders, text: ''}
+  XMLHttpRequest.nextResponse = {
+    status: 200,
+    statusText: 'OK',
+    headers: baseResponseHeaders,
+    body: '',
+  }
   const [{mock: {request}}] = runXhrSync({
     url: '/',
     method: 'post',
@@ -201,7 +206,12 @@ encode_request_body_json: {
 }
 
 encode_request_body_formdata: {
-  XMLHttpRequest.nextResponse = {status: 200, headers: baseResponseHeaders, text: ''}
+  XMLHttpRequest.nextResponse = {
+    status: 200,
+    statusText: 'OK',
+    headers: baseResponseHeaders,
+    body: '',
+  }
   const [{mock: {request}}] = runXhrSync({
     url: '/',
     method: 'post',
@@ -212,7 +222,12 @@ encode_request_body_formdata: {
 }
 
 encode_request_body_readonly_formdata: {
-  XMLHttpRequest.nextResponse = {status: 200, headers: baseResponseHeaders, text: ''}
+  XMLHttpRequest.nextResponse = {
+    status: 200,
+    statusText: 'OK',
+    headers: baseResponseHeaders,
+    body: '',
+  }
 
   // code duplication = defense against random mutations (just kidding)
 
@@ -248,28 +263,34 @@ encode_request_body_readonly_formdata: {
 }
 
 passthrough_response_body: {
-  const text = JSON.stringify({msg: 'hello'})
-  XMLHttpRequest.nextResponse = {status: 200, headers: baseResponseHeaders, text}
-  const [__, {body}] = runXhrSync({url: '/'})
-  assert.deepEqual(body, text)
+  const body = JSON.stringify({msg: 'hello'})
+  XMLHttpRequest.nextResponse = {
+    status: 200,
+    statusText: 'OK',
+    headers: baseResponseHeaders,
+    body,
+  }
+  const [__, response] = runXhrSync({url: '/'})
+  assert.deepEqual(response.body, body)
 }
 
 parse_response_body_json: {
-  const text = JSON.stringify({msg: 'hello'})
+  const body = JSON.stringify({msg: 'hello'})
   XMLHttpRequest.nextResponse = {
     status: 200,
+    statusText: 'OK',
     headers: patch(baseResponseHeaders, jsonTypeHeaders),
-    text,
+    body,
   }
-  const [__, {body}] = runXhrSync({url: '/'})
-  assert.deepEqual(body, {msg: 'hello'})
+  const [__, response] = runXhrSync({url: '/'})
+  assert.deepEqual(response.body, {msg: 'hello'})
 }
 
 not_ok: {
   XMLHttpRequest.nextResponse = {
     status: 400,
     headers: patch(baseResponseHeaders, jsonTypeHeaders),
-    text: JSON.stringify({msg: 'UR MOM IS FAT'}),
+    body: JSON.stringify({msg: 'UR MOM IS FAT'}),
   }
   const [__, {complete, reason, status, ok, body}] = runXhrSync({url: '/'})
 
@@ -281,7 +302,7 @@ not_ok: {
 }
 
 detect_abort: {
-  XMLHttpRequest.nextResponse = {status: 0, reason: 'abort', headers: baseResponseHeaders, text: ''}
+  XMLHttpRequest.nextResponse = {status: 0, reason: 'abort', headers: baseResponseHeaders, body: ''}
   const [__, {complete, ok, reason}] = runXhrSync({url: '/'})
   assert.deepEqual(complete, true)
   assert.deepEqual(ok, false)
@@ -289,7 +310,7 @@ detect_abort: {
 }
 
 detect_error: {
-  XMLHttpRequest.nextResponse = {status: 0, reason: 'error', headers: baseResponseHeaders, text: ''}
+  XMLHttpRequest.nextResponse = {status: 0, reason: 'error', headers: baseResponseHeaders, body: ''}
   const [__, {complete, ok, reason}] = runXhrSync({url: '/'})
   assert.deepEqual(complete, true)
   assert.deepEqual(ok, false)
@@ -297,7 +318,7 @@ detect_error: {
 }
 
 detect_timeout: {
-  XMLHttpRequest.nextResponse = {status: 0, reason: 'timeout', headers: baseResponseHeaders, text: ''}
+  XMLHttpRequest.nextResponse = {status: 0, reason: 'timeout', headers: baseResponseHeaders, body: ''}
   const [__, {complete, ok, reason}] = runXhrSync({url: '/'})
   assert.deepEqual(complete, true)
   assert.deepEqual(ok, false)
