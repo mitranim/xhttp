@@ -58,7 +58,7 @@ Many libraries make another big mistake: losing a reference to the underlying `X
 
 `fetch` is fundamentally broken because it gives you a promise instead of a reference to the HTTP task, hiding a rich, manageable reference behind ephemeral callbacks. As a result, it lacks such vital features as:
 
-  * upload progress
+  * upload / download progress
   * ability to abort
 
 It has only one real advantage over `XMLHttpRequest`: streaming the response instead of buffering it all in memory, but this is irrelevant for most uses, and will probably get bolted onto `XMLHttpRequest` some day.
@@ -92,7 +92,7 @@ const xhr = xhttp.Xhttp({url: '/'}, ({ok, status, reason, headers, body}) => {
 
 Note: there's no "success" or "failure" callbacks. You can branch based on the `status` code, the `reason` the request was stopped, or the shorthand `ok` which means `reason === 'load'` and `status` between 200 and 299.
 
-If you're doing something less common, such as sending and receiving binary data, or tracking upload progress, you're meant to re-assemble an alternative to `Xhttp` using the provided lower-level functions. Example:
+If you're doing something less common, such as sending and receiving binary data, or tracking upload / download progress, you're meant to re-assemble an alternative to `Xhttp` using the provided lower-level functions. Example:
 
 ```js
 import * as xhttp from 'xhttp'
@@ -192,7 +192,7 @@ Pay attention to your headers. You may want to write a tiny wrapper to add defau
 
 `xhttp` exports a few building blocks for re-assembling a custom version of `Xhttp`.
 
-Suppose you want to track upload progress. It's not worth doing in every request, so you'll probably want a separate function:
+Suppose you want to track upload / download progress. It's not worth doing in every request, so you'll probably want a separate function:
 
 ```js
 import {
