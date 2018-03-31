@@ -30,9 +30,6 @@ class XMLHttpRequest {
     this.statusText = ''
     this.responseText = ''
 
-    // Non-standard property set by xhttp
-    this.params = null
-
     this.mock = {
       request: {
         method: null,
@@ -149,7 +146,7 @@ basic_usage: {
     // mock event
     event: {target: xhr, type: 'load'},
     // parsed params
-    // params: {rawParams: {url: '/'}, method: 'GET', url: '/', async: true, headers: {}, body: null},
+    params: {rawParams: {url: '/'}, method: 'GET', url: '/', headers: {}, body: null},
     complete: true,
     completedAt: result.completedAt,
     reason: 'load',

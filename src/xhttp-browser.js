@@ -6,9 +6,11 @@ export function Xhttp(params, fun) {
   validate(params, isDict)
   validate(fun, isFunction)
   const xhr = new XMLHttpRequest()
-  start(xhr, transformParams(params), function onXhrDone(event) {
+  params = transformParams(params)
+  start(xhr, params, function onXhrDone(event) {
     const response = eventToResponse(event)
     response.body = getResponseBody(xhr)
+    response.params = params
     fun(response)
   })
   return xhr

@@ -165,6 +165,9 @@ interface Response {
   //   'timeout'  -- request timed out
   reason: string
 
+  // Parsed request params
+  params: Params
+
   // Unix timestamp in milliseconds
   completedAt: number
 
