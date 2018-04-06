@@ -112,7 +112,7 @@ export function getResponseBody(xhr) {
  */
 
 function isReadOnly(method) {
-  return /GET|HEAD|OPTIONS/i.test(method)
+  return !method || /GET|HEAD|OPTIONS/i.test(method)
 }
 
 function encodeUrl(url, method, body) {
@@ -130,7 +130,7 @@ function findContentType(headers) {
 
 function encodeBody(body, method, contentType) {
   return isReadOnly(method)
-    ? null
+    ? undefined
     : /application\/json/i.test(contentType) && isJSONEncodable(body)
     ? JSON.stringify(body)
     : /application\/x-www-form-urlencoded/i.test(contentType) && isDict(body)

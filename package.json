@@ -1,6 +1,6 @@
 {
   "name": "xhttp",
-  "version": "0.9.1",
+  "version": "0.9.2",
   "description": "Lightweight library for making HTTP requests in Node.js and browsers",
   "author": "Mitranim <me@mitranim.com>",
   "main": "dist/xhttp-browser.js",
@@ -25,7 +25,7 @@
     "xhr"
   ],
   "dependencies": {
-    "fpx": "^0.4.0",
+    "fpx": "^0.4.4",
     "posterus": "^0.3.0"
   },
   "devDependencies": {
