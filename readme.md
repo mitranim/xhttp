@@ -212,7 +212,7 @@ export function trackingHttpRequest(params, onDone, onUpload, onDownload) {
   start(xhr, transformParams(params), event => {
     const response = eventToResponse(event)
     response.body = getResponseBody(xhr)
-    fun(response)
+    onDone(response)
   })
 
   xhr.upload.onprogress = onUpload
@@ -349,7 +349,7 @@ export function httpRequest(params) {
 httpRequest(params)
   .mapResult(response => {/* ... */})
   .mapError(error => {/* ... */})
-  // abort
+  // produces an error, running the .finally callback and aborting
   .deinit()
 ```
 
