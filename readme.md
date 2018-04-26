@@ -355,20 +355,13 @@ httpRequest(params)
 
 ## Changelog
 
-### 0.9 → 0.10.0
+### 0.9.0 → 0.10.0
 
-Minor but breaking cleanup in the Node.js API.
-
-  * renamed `httpRequest` → `textRequest`
-  * renamed `okErr` → `httpError`
-  * `textRequest` and `jsonRequest` no longer implicitly use `httpError` to throw on non-200+ responses
-  * an aborted response now has `.reason = 'abort'`, not `.reason = 'aborted'` for mental consistency with its counterpart in the browser library
-
-Also updated dependencies.
+See [readme-node.md#changelog](readme-node.md#changelog).
 
 ### 0.8.0 → 0.9.0
 
-Breaking cleanup. Renamed/replaced most lower-level utils (that nobody ever used) to simplify customization. See the Misc Utils section for the new examples. The main `Xhttp` function works the same way, so most users shouldn't notice a difference.
+Breaking cleanup in the browser version. Renamed/replaced most lower-level utils (that nobody ever used) to simplify customization. See the Misc Utils section for the new examples. The main `Xhttp` function works the same way, so most users shouldn't notice a difference.
 
 ## Misc
 

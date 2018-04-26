@@ -398,6 +398,17 @@ Might want to consider [Posterus fibers](https://github.com/Mitranim/posterus#fi
 
 ## Changelog
 
+### 0.9 → 0.10.0
+
+Minor but breaking cleanup in the Node.js version.
+
+  * renamed `httpRequest` → `textRequest`
+  * renamed `okErr` → `httpError`
+  * `textRequest` and `jsonRequest` no longer implicitly use `httpError` to throw on non-200+ responses
+  * an aborted response now has `.reason = 'abort'`, not `.reason = 'aborted'` for mental consistency with its counterpart in the browser library
+
+Also updated dependencies.
+
 ### 0.8.0 → 0.9.0
 
 Breaking: `Response` no longer has a `.stream` property; in a streaming response, the `.body` is a stream.
@@ -405,6 +416,8 @@ Breaking: `Response` no longer has a `.stream` property; in a streaming response
 `bufferBody` and `stringifyBody` now work on anything with a `.body` and don't require the full `Response` structure.
 
 `bufferBody` consistently returns a future.
+
+Also see [readme.md#changelog](readme.md#changelog).
 
 ## Misc
 
