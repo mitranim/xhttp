@@ -6,14 +6,14 @@ const {parse: parseUrl} = require('url')
 const {PassThrough} = require('stream')
 const {lookup} = require('dns')
 const {Future} = require('posterus')
-const {routine} = require('posterus/routine')
+const {fiber} = require('posterus/fiber')
 const {streamingRequest, bufferBody, jsonRequest} = require('../node')
 
 const PORT = 9834
 const HOST = `http://127.0.0.1:${PORT}`
 
 const server = startServer().once('listening', () => {
-  routine(runTest()).map(error => {
+  fiber(runTest()).map(error => {
     server.close()
     if (error) throw error
   })

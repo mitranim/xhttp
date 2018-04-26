@@ -1,11 +1,6 @@
-# Commonly ignored files
-*.log
-.DS_Store
-
-# Folders
-node_modules
-test
-
-# Build-related files
-gulpfile.js
-yarn.lock
+/*
+!/lib
+!/src
+!/node.js
+!/readme-node.md
+!/readme.md

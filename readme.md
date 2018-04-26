@@ -17,7 +17,7 @@ Difference from other similar libraries:
   * no premature branching: one callback with one argument
   * doesn't force promises (easy to add)
 
-Small (≈220 LOC) and dependency-free. Compatible with IE9+.
+Small (≈220 LoC) and dependency-free. Compatible with IE9+.
 
 ## TOC
 
@@ -354,6 +354,17 @@ httpRequest(params)
 ```
 
 ## Changelog
+
+### 0.9 → 0.10.0
+
+Minor but breaking cleanup in the Node.js API.
+
+  * renamed `httpRequest` → `textRequest`
+  * renamed `okErr` → `httpError`
+  * `textRequest` and `jsonRequest` no longer implicitly use `httpError` to throw on non-200+ responses
+  * an aborted response now has `.reason = 'abort'`, not `.reason = 'aborted'` for mental consistency with its counterpart in the browser library
+
+Also updated dependencies.
 
 ### 0.8.0 → 0.9.0
 

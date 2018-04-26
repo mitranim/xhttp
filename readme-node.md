@@ -10,8 +10,7 @@ Not isomorphic: has different APIs for Node and browsers.
 
 ## Overview: Node Library
 
-Toolkit for making HTTP requests in Node.js. More convenient than stdlib,
-more lightweight than the popular alternatives.
+Toolkit for making HTTP requests in Node.js. **Much** more convenient than the standard `http` module, **much** more lightweight than the popular alternatives.
 
 ## TOC
 
@@ -21,13 +20,13 @@ more lightweight than the popular alternatives.
 * [API](#api)
   * [`Request Params`](#request-params)
   * [`Response`](#response)
-  * [`httpRequest`](#httprequestparams)
-  * [`jsonRequest`](#jsonrequestparams)
-  * [`bufferedRequest`](#bufferedrequestparams)
   * [`streamingRequest`](#streamingrequestparams)
+  * [`bufferedRequest`](#bufferedrequestparams)
+  * [`textRequest`](#textrequestparams)
+  * [`jsonRequest`](#jsonrequestparams)
   * [`bufferBody`](#bufferbodyresponse)
   * [`stringifyBody`](#stringifybodyresponse)
-  * [`okErr`](#okerrresponse)
+  * [`httpError`](#httperrorresponse)
   * [`isResponse`](#isresponsevalue)
 * [Futures](#futures)
 * [Changelog](#changelog)
@@ -35,12 +34,11 @@ more lightweight than the popular alternatives.
 
 ## Why
 
-* Lightweight: <300 LOC, very minimal dependencies
+* Lightweight: <300 LoC, very minimal dependencies
 * Convenient:
-  * has a convenient high level API
-  * avoids callbacks and events, provides a promise/future API
+  * nice high level API, mostly futures/promises
   * retains access to streaming APIs
-  * provides response metadata in a usable format
+  * usable format for response metadata
 * Efficient: few layers of crap
 
 ### Why not `request`
@@ -56,7 +54,9 @@ it takes 100 ms to start up on my machine. Very unhealthy.
 Shell:
 
 ```sh
-npm install --exact xhttp
+npm i -E xhttp
+# or
+yarn add -E xhttp
 ```
 
 Node:
@@ -69,86 +69,104 @@ For Node.js, you must import from **`xhttp/node`**, not `xhttp`.
 
 ## Usage
 
-(For cancelation, see below.)
-
-Use `httpRequest` for plain text requests. Will buffer and stringify the
-response, and produce an exception if the response code is not between 200 and
-299:
+Basic request, with response as stream:
 
 ```js
-const {httpRequest} = require('xhttp/node')
+const xhttp = require('xhttp/node')
 
 async function main() {
-  try {
-    const response = await httpRequest({url: '<some url>'})
-    const {ok, status, statusText, headers, body} = response
-  }
-  catch (err) {
-    const {message, stack, ok, status, statusText, headers, body} = err
-  }
-}
-```
-
-Use `jsonRequest` for basic JSON requests. Encodes request, adds headers, tries
-to decode response:
-
-```js
-const {jsonRequest} = require('xhttp/node')
-
-async function main() {
-  const response = await jsonRequest({
-    url: '<some url>',
-    body: {key: 'value'},
-  })
-  // If the endpoint responds with JSON, the body is decoded
-  const {body} = response
-}
-```
-
-Use `bufferedRequest` for binary requests. It deals with byte `Buffer`s:
-
-```js
-const {bufferedRequest} = require('xhttp/node')
-
-async function main() {
-  const {ok, status, statusText, headers, body} = await bufferedRequest({
-    url: '<some url>',
-    method: 'POST',
-    body: fs.createReadStream('<data file>'),
-  })
-}
-```
-
-`streamingRequest` is the underlying tool used by other functions. It doesn't
-buffer or coerce responses:
-
-```js
-const {streamingRequest} = require('xhttp/node')
-
-async function main() {
-  const {ok, status, statusText, headers, body} = await streamingRequest({
-    url: '<some url>',
-    method: 'POST',
-    body: fs.createReadStream('<data file>'),
-  })
+  const response = await xhttp.streamingRequest({url: '<some url>'})
+  const {ok, status, statusText, headers, body} = response
+  // body is a stream and hasn't been fully downloaded yet
   body.pipe(process.stdout)
 }
 ```
 
-Cancelation:
+Other request functions pre-buffer the response:
 
 ```js
-const req = streamingRequest(params)
-req.deinit()
+const response = await xhttp.bufferedRequest({url: '<some url>'})
+const {body} = response
+// body is a Buffer
+
+const response = await xhttp.textRequest({url: '<some url>'})
+const {body} = response
+// body is a string
+
+const response = await xhttp.jsonRequest({url: '<some url>'})
+const {body} = response
+// body is parsed from JSON, if possible
 ```
 
-See [Futures](#futures) for explanation.
+Each request function can send a stream, a byte buffer, or a string:
+
+```js
+xhttp.textRequest({
+  url: '...',
+  method: 'post',
+  body: fs.createReadStream('some-file'),
+})
+
+xhttp.textRequest({
+  url: '...',
+  method: 'post',
+  body: Buffer.from('hello world!'),
+})
+
+xhttp.textRequest({
+  url: '...',
+  method: 'post',
+  body: 'hello world!',
+})
+```
+
+Use [`httpError`](#httperrorresponse) to produce an exception if the request ended with a non-ok HTTP code:
+
+```js
+xhttp.textRequest({})
+  .then(xhttp.httpError)
+  .catch(error => {
+    const {response} = error
+  })
+```
+
+Responses can be consumed as promises:
+
+```js
+xhttp.textRequest({})
+  .then(response => {})
+  .catch(error => {})
+
+async function main() {
+  try {
+    const response = await xhttp.textRequest({})
+  }
+  catch (err) {
+    // ...
+  }
+}
+```
+
+They're actually futures from the [Posterus](https://github.com/Mitranim/posterus) library, and support cancelation:
+
+```js
+const future = xhttp.textRequest({})
+  .mapResult(response => {})
+  .mapError(error => {})
+
+const future = xhttp.textRequest({})
+  .map((error, response) => {})
+
+future.deinit()
+```
+
+See [Futures](#futures) for an explanation.
 
 ## API
 
 ### Request Params
 
-Request params format:
+You pass this to the request functions:
 
 ```ts
 interface Params {
@@ -162,7 +180,7 @@ interface Params {
 
 ### Response
 
-Response format:
+Requests return this:
 
 ```ts
 interface Response {
@@ -170,7 +188,7 @@ interface Response {
   ok: boolean
   status: string
   statusText: string
-  // One of: 'load' | 'timeout' | 'aborted'
+  // One of: 'load' | 'timeout' | 'abort'
   reason: string
   // Response headers, with lowercased keys
   headers: {[string]: string}
@@ -179,83 +197,36 @@ interface Response {
 }
 ```
 
-`streamingRequest` resolves to a Response where `.body` is a Node readable stream.
+### `streamingRequest(params)`
 
-`bufferedRequest`, `httpRequest`, `jsonRequest`, and `bufferBody` resolve to a Response where `.body` is a fully realized `Buffer` or string.
+Core API. Takes [Params](#request-params) and returns a [future](#futures) that eventually resolves to a [Response](#response) where `.body` is a Node readable stream.
 
-### `httpRequest(params)`
+Will automatically handle request and response lifecycles, which are normally a pain to get right.
 
-High-level API. Takes [Params](#request-params) and returns a [future](#futures) that eventually resolves to a [Response](#response) that contains the response body, coerced to a string, as `.body`.
+`params.body` can be a stream, a buffer, or a string. `response.body` is always a stream.
 
-Will automatically:
-  * buffer response
-  * convert response from `Buffer` to string
-  * coerce to error if response status code is not between 200 and 299
+Basic usage:
 
 ```js
-const {httpRequest} = require('xhttp/node')
+const {streamingRequest} = require('xhttp/node')
 
 async function main() {
-  try {
-    const response = await httpRequest({url: '<some url>'})
-    const {ok, status, statusText, headers, body} = response
-  }
-  catch (err) {
-    const {message, stack, ok, status, statusText, headers, body} = err
-  }
+  const response = await streamingRequest({url: '<some url>'})
+  const {ok, status, statusText, headers, body} = response
+  body.pipe(process.stdout)
 }
 ```
 
-Defined in terms of `bufferedRequest` and other utils:
+Cancelation:
 
 ```js
-const {bufferedRequest, stringifyBody, okErr} = require('xhttp/node')
-
-function httpRequest(params) {
-  return bufferedRequest(params).mapResult(stringifyBody).mapResult(okErr)
-}
-```
-
-### `jsonRequest(params)`
-
-High-level API for JSON requests. Takes [Params](#request-params) and returns a
-[future](#futures) that eventually resolves to a [Response](#response) that
-contains the response body, possibly decoded from JSON, as `.body`.
-
-Will automatically:
-  * encode `params.body` as JSON
-  * add JSON headers
-  * decode `response.body` if _response_ headers indicate JSON content type
-
-```js
-const {jsonRequest} = require('xhttp/node')
-
-async function main() {
-  const response = await jsonRequest({
-    url: '<some url>',
-    body: {key: 'value'},
-  })
-  // If the some url responds with JSON, body is decoded
-  const {body} = response
-}
-```
-
-Defined in terms of `bufferedRequest` and other utils:
-
-```js
-const {bufferedRequest, toJsonParams, stringifyBody, maybeParseBody, okErr} = require('xhttp/node')
-
-function jsonRequest(params) {
-  return bufferedRequest(toJsonParams(params))
-    .mapResult(stringifyBody)
-    .mapResult(maybeParseBody)
-    .mapResult(okErr)
-}
+const future = streamingRequest(params)
+future.deinit()
 ```
 
 ### `bufferedRequest(params)`
 
-Mid-level API. Takes [Params](#request-params) and returns a [future](#futures) that eventually resolves to a [Response](#response) that contains the response body, as a byte `Buffer`, as `.body`.
+Mid-level API. Takes [Params](#request-params) and returns a [future](#futures) that eventually resolves to a [Response](#response) where `response.body` is a Node `Buffer` (raw bytes).
 
 Usage:
 
@@ -268,7 +239,7 @@ async function main() {
 }
 ```
 
-Definition:
+Defined in terms of `streamingRequest`:
 
 ```js
 const {streamingRequest, bufferBody} = require('xhttp/node')
@@ -278,39 +249,56 @@ function bufferedRequest(params) {
 }
 ```
 
-### `streamingRequest(params)`
+### `textRequest(params)`
 
-Core API. Takes [Params](#request-params) and returns a [future](#futures) that
-eventually resolves to a [Response](#response) where `.body` is a Node readable stream.
-
-Will automatically handle request and response lifecycles, which are normally a
-pain to get right.
-
-Will accept `params.body` as `Stream|Buffer|string` and send it automatically.
-
-Will **not**:
-  * buffer response stream
-  * coerce to error based on HTTP status code
-
-Basic usage:
+High-level API. Takes [Params](#request-params) and returns a [future](#futures) that eventually resolves to a [Response](#response) where `response.body` is fully buffered and converted to a string.
 
 ```js
-const {streamingRequest} = require('xhttp/node')
+const {textRequest} = require('xhttp/node')
 
 async function main() {
-  const {ok, status, statusText, headers, body} = await streamingRequest({
-    url: '<some url>',
-    body: fs.createReadStream('<data file>'),
-  })
-  body.pipe(process.stdout)
+  const response = await textRequest({url: '<some url>'})
+  const {ok, status, statusText, headers, body} = response
 }
 ```
 
-Cancelation:
+Defined in terms of `bufferedRequest`:
 
 ```js
-const req = streamingRequest(params)
-req.deinit()
+const {bufferedRequest, stringifyBody} = require('xhttp/node')
+
+function textRequest(params) {
+  return bufferedRequest(params).mapResult(stringifyBody)
+}
+```
+
+### `jsonRequest(params)`
+
+High-level API for JSON requests. Takes [Params](#request-params) and returns a [future](#futures) that eventually resolves to a [Response](#response) where `response.body` is fully buffered, and decoded from JSON if possible.
+
+Always encodes `params.body` as JSON. Decodes the response body only if the response headers specify the `application/json` content type.
+
+```js
+const {jsonRequest} = require('xhttp/node')
+
+async function main() {
+  const response = await jsonRequest({
+    url: '<some url>',
+    body: {key: 'value'},
+  })
+  // If the response content type is JSON, body is decoded
+  const {body} = response
+}
+```
+
+Defined in terms of `textRequest`:
+
+```js
+const {textRequest, toJsonParams, maybeParseBody} = require('xhttp/node')
+
+function jsonRequest(params) {
+  return textRequest(toJsonParams(params)).mapResult(maybeParseBody)
+}
 ```
 
 ### `bufferBody(response)`
@@ -329,8 +317,7 @@ streamingRequest(params)
 
 ### `stringifyBody(response)`
 
-Takes a [Response](#response) returned by `bufferBody` and coerces its `.body`
-to a string.
+Takes a [Response](#response) returned by `bufferBody` and coerces its `.body` to a string.
 
 ```js
 const {streamingRequest, bufferBody, stringifyBody} = require('xhttp/node')
@@ -343,17 +330,17 @@ streamingRequest(params)
   })
 ```
 
-### `okErr(response)`
+### `httpError(response)`
 
 Takes a [Response](#response) and returns a future that produces an error if the HTTP status code is not between 200 and 299.
 
 The resulting `HttpError` contains the original response as `error.response`.
 
 ```js
-const {streamingRequest, okErr, HttpError} = require('xhttp/node')
+const {streamingRequest, httpError, HttpError} = require('xhttp/node')
 
 streamingRequest(params)
-  .mapResult(okErr)
+  .mapResult(httpError)
   .map((error, response) => {
     if (error instanceof HttpError) {
       const {ok, status, statusText, headers, body} = error.response
@@ -365,7 +352,7 @@ streamingRequest(params)
 
 ### `isResponse(value)`
 
-True if `value` looks like a [Response](#response). Doesn't care if the response is streaming or buffered.
+True if `value` looks like a [Response](#response).
 
 ```js
 const {streamingRequest, isResponse} = require('xhttp/node')
@@ -377,18 +364,37 @@ streamingRequest(params).mapResult(response => {
 
 ## Futures
 
-All async functions in `xhttp` return Posterus futures. See the [Posterus
-documentation](https://github.com/Mitranim/posterus). They automatically coerce
-to promises, making them compatible with other promises and async/await.
-
-Futures support cancelation. To abort a request, call `.deinit()`:
+All async functions in `xhttp` return Posterus futures. See the [Posterus documentation](https://github.com/Mitranim/posterus). They look and behave like promises:
 
 ```js
-const req = streamingRequest(params)
-req.deinit()
+xhttp.streamingRequest({})
+  .then(xhttp.httpError)
+  .then(response => {})
+  .catch(error => {})
+
+async function main() {
+  try {
+    const response = xhttp.httpError(await xhttp.streamingRequest({}))
+  }
+  catch (err) {
+    // ...
+  }
+}
 ```
 
-They have other benefits, but if you don't care, that's all you need to know.
+As an added benefit, they support cancelation. To abort a request, call `.deinit()`:
+
+```js
+const future = xhttp.streamingRequest(params)
+  .mapResult(xhttp.httpError)
+  .map((error, response) => {
+    // ...
+  })
+
+future.deinit()
+```
+
+Might want to consider [Posterus fibers](https://github.com/Mitranim/posterus#fiber). They're exactly like async functions, but support in-progress cancelation.
 
 ## Changelog
 
@@ -402,6 +408,6 @@ Breaking: `Response` no longer has a `.stream` property; in a streaming response
 
 ## Misc
 
-Currently doesn't support redirects. Every time I _thought_ I needed them, turned out I didn't.
+No redirect support yet. Every time I _thought_ I needed redirects, after careful examination it turned out I didn't.
 
 I'm receptive to suggestions. If this library _almost_ satisfies you but needs changes, open an issue or chat me up. Contacts: https://mitranim.com/#contacts
