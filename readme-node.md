@@ -274,7 +274,7 @@ function textRequest(params) {
 
 ### `jsonRequest(params)`
 
-High-level API for JSON requests. Takes [Params](#request-params) and returns a [future](#futures) that eventually resolves to a [Response](#response) where `response.body` is fully buffered, and decoded from JSON if possible.
+High-level API for JSON requests. Takes [Params](#request-params) and returns a [future](#futures) that eventually resolves to a [Response](#response) where `response.body` is fully buffered, converted to a string, and decoded from JSON if possible.
 
 Always encodes `params.body` as JSON. Decodes the response body only if the response headers specify the `application/json` content type.
 
@@ -303,7 +303,7 @@ function jsonRequest(params) {
 
 ### `bufferBody(response)`
 
-Takes a [Response](#response) returned by `streamingRequest` and returns a future that eventually resolves to a Response where `.body` is a fully realized `Buffer` rather than a stream. Using `.setEncoding()` on the readable stream before buffering causes it to be buffered as a string using the given encoding.
+Takes a [Response](#response) from `streamingRequest`. Returns a future that eventually resolves to a Response where `.body` is no longer a stream, but a Node `Buffer`. Using `.setEncoding(<encoding>)` on the readable stream causes it to be buffered as a string, using the given encoding.
 
 ```js
 const {streamingRequest, bufferBody} = require('xhttp/node')
@@ -332,9 +332,7 @@ streamingRequest(params)
 
 ### `httpError(response)`
 
-Takes a [Response](#response) and returns a future that produces an error if the HTTP status code is not between 200 and 299.
-
-The resulting `HttpError` contains the original response as `error.response`.
+Takes a [Response](#response). Returns it unchanged if the HTTP status code is between 200 and 299. Otherwise throws an `HttpError` that contains the response as `error.response`.
 
 ```js
 const {streamingRequest, httpError, HttpError} = require('xhttp/node')
