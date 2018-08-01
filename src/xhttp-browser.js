@@ -5,14 +5,17 @@
 export function Xhttp(params, fun) {
   validate(params, isDict)
   validate(fun, isFunction)
-  const xhr = new XMLHttpRequest()
+
   params = transformParams(params)
+  const xhr = new XMLHttpRequest()
+
   start(xhr, params, function onXhrDone(event) {
     const response = eventToResponse(event)
     response.body = getResponseBody(xhr)
     response.params = params
     fun(response)
   })
+
   return xhr
 }
 
@@ -34,12 +37,15 @@ export function transformParams(params) {
 export function start(xhr, params, fun) {
   validate(params, isDict)
   validate(fun, isFunction)
-  if (xhr.readyState === xhr.UNSENT || xhr.readyState === xhr.DONE) {
-    setCallback(xhr, fun)
-    open(xhr, params)
-    sendHeaders(xhr, params)
-    sendBody(xhr, params)
+
+  if (!(xhr.readyState === xhr.UNSENT || xhr.readyState === xhr.DONE)) {
+    throw Error(`Request can be started only when UNSENT or DONE`)
   }
+
+  setCallback(xhr, fun)
+  open(xhr, params)
+  sendHeaders(xhr, params)
+  sendBody(xhr, params)
 }
 
 export function setCallback(xhr, fun) {

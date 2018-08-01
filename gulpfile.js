@@ -56,14 +56,8 @@ gulp.task('compile', () => (
 let testProc = null
 
 gulp.task('test', done => {
-  // Still running, let it finish
-  if (testProc && testProc.exitCode == null) {
-    done()
-    return
-  }
-
+  if (testProc) testProc.kill()
   testProc = fork('./test/test')
-
   testProc.once('exit', code => {
     done(code ? GulpErr(`Test failed with exit code ${code}`) : null)
   })

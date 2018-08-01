@@ -5,107 +5,146 @@ const {createServer} = require('http')
 const {parse: parseUrl} = require('url')
 const {PassThrough} = require('stream')
 const {lookup} = require('dns')
-const {Future} = require('posterus')
-const {fiber} = require('posterus/fiber')
-const {streamingRequest, bufferBody, jsonRequest} = require('../node')
+const xhttp = require('../node')
 
 const PORT = 9834
 const HOST = `http://127.0.0.1:${PORT}`
 
-const server = startServer().once('listening', () => {
-  fiber(runTest()).map(error => {
+const server = startServer().once('listening', async () => {
+  try {
+    await runTest()
+  }
+  catch (err) {
+    console.error(err)
+    process.exit(1)
+  }
+  finally {
     server.close()
-    if (error) throw error
-  })
+  }
 })
 
-function* runTest() {
-  yield testGet()
-  yield testPostPlainBody()
-  yield testPostStream()
-  yield test404()
-  yield testJson()
-  if (!(yield isInternetAvailable())) {
+/** Tests **/
+
+async function runTest() {
+  await testGet()
+  await testPostPlainBody()
+  await testPostStream()
+  await test404()
+  await testJson()
+  await testAbort()
+  if (!(await isInternetAvailable())) {
     console.info('Skipping internet-dependent tests')
   }
-  yield testHttps()
+  await testHttps()
 }
 
-function* testGet() {
+async function testGet() {
   const search = '?message=hello_world'
   const hash = '#hash'
 
-  const response = yield streamingRequest({
-    url: `${HOST}${search}${hash}`,
+  const response = await errbackPromise(done => {
+    xhttp.streamingRequest({
+      url: `${HOST}${search}${hash}`,
+    }, done)
   })
 
   assert.deepEqual(response.ok, true)
   assert.deepEqual(response.status, 200)
 
-  const {body} = yield bufferBody(response)
+  const body = await errbackPromise(done => {
+    xhttp.bufferStream(response.body, done)
+  })
 
+  assert.ok(Buffer.isBuffer(body), `Expected buffer`)
   assert.deepEqual(String(body), `${search}${hash}`)
 }
 
-function* testPostPlainBody() {
+async function testPostPlainBody() {
   const body = 'Hello world!'
 
-  const response = yield streamingRequest({
-    url: `${HOST}`,
-    method: 'POST',
-    body,
+  const response = await errbackPromise(done => {
+    xhttp.streamingRequest({
+      url: HOST,
+      method: 'POST',
+      body,
+    }, done)
   })
 
   assert.deepEqual(response.ok, true)
   assert.deepEqual(response.status, 200)
 
-  const buffered = yield bufferBody(response)
+  const buffered = await errbackPromise(done => {
+    xhttp.bufferStream(response.body, done)
+  })
 
-  assert.deepEqual(buffered.ok, true)
-  assert.deepEqual(buffered.status, 200)
-  assert.ok(Buffer.isBuffer(buffered.body), `Expected a fully buffered body`)
-  assert.deepEqual(String(buffered.body), body)
+  assert.ok(Buffer.isBuffer(buffered), `Expected buffer`)
+  assert.deepEqual(String(buffered), body)
 }
 
-function* testPostStream() {
+async function testPostStream() {
   const msg = 'Hello world!'
   const body = new PassThrough()
   body.push(msg)
   body.end()
 
-  const response = yield streamingRequest({
-    url: `${HOST}`,
-    method: 'POST',
-    body,
+  const response = await errbackPromise(done => {
+    xhttp.streamingRequest({
+      url: HOST,
+      method: 'POST',
+      body,
+    }, done)
   })
 
   assert.deepEqual(response.ok, true)
   assert.deepEqual(response.status, 200)
 
-  const buffered = yield bufferBody(response)
+  const buffered = await errbackPromise(done => {
+    xhttp.bufferStream(response.body, done)
+  })
 
-  assert.deepEqual(buffered.ok, true)
-  assert.deepEqual(buffered.status, 200)
-  assert.ok(Buffer.isBuffer(buffered.body), `Expected a fully buffered body`)
-  assert.deepEqual(String(buffered.body), msg)
+  assert.ok(Buffer.isBuffer(buffered), `Expected buffer`)
+  assert.deepEqual(String(buffered), msg)
 }
 
-function* test404() {
-  const {ok, status} = yield streamingRequest({url: `${HOST}/404`})
+async function test404() {
+  const {ok, status} = await errbackPromise(done => {
+    xhttp.streamingRequest({url: `${HOST}/404`}, done)
+  })
   assert.deepEqual(ok, false)
   assert.deepEqual(status, 404)
 }
 
-function* testJson() {
+async function testJson() {
   const body = [{message: 'Hello world!'}]
-  const response = yield jsonRequest({url: `${HOST}/json`, method: 'POST', body})
+  const response = await errbackPromise(done => {
+    xhttp.jsonRequest({url: `${HOST}/json`, method: 'POST', body}, done)
+  })
   assert.deepEqual(response.body, body)
 }
 
-function* testHttps() {
-  const {ok} = yield streamingRequest({url: 'https://mitranim.com'}).mapResult(bufferBody)
+async function testAbort() {
+  try {
+    await errbackPromise(done => {
+      xhttp.streamingRequest({url: HOST}, done).abort()
+    })
+  }
+  catch (err) {
+    if (err instanceof xhttp.HttpError && err.response.reason === 'abort') {
+      return
+    }
+    throw err
+  }
+  throw Error(`Expected an abort error`)
+}
+
+async function testHttps() {
+  const {ok} = await await errbackPromise(done => {
+    xhttp.bufferedRequest({url: 'https://mitranim.com'}, done)
+  })
   assert.ok(ok, `Expected HTTPS request to succeed`)
 }
+
+/** Misc **/
 
 function startServer() {
   const server = createServer(handler)
@@ -139,9 +178,16 @@ function handler(req, res) {
 }
 
 function isInternetAvailable() {
-  const future = new Future()
-  lookup('mitranim.com', err => {
-    future.settle(null, !err)
+  return new Promise(resolve => {
+    lookup('mitranim.com', err => {resolve(!err)})
   })
-  return future
+}
+
+function errbackPromise(init) {
+  return new Promise((resolve, reject) => {
+    init(function done(err, val) {
+      if (err) reject(err)
+      else resolve(val)
+    })
+  })
 }

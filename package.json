@@ -1,8 +1,6 @@
 {
   "name": "xhttp",
-  "version": "0.10.0",
-  "description": "Lightweight library for making HTTP requests in Node.js and browsers",
-  "author": "Mitranim <me@mitranim.com>",
+  "version": "0.11.0",
   "main": "dist/xhttp-browser.js",
   "module": "es/xhttp-browser.js",
   "browser": "es/xhttp-browser.js",
@@ -10,23 +8,8 @@
     "start": "gulp",
     "prepublishOnly": "gulp build"
   },
-  "repository": {
-    "type": "git",
-    "url": "git://github.com/Mitranim/xhttp.git"
-  },
-  "license": "MIT",
-  "keywords": [
-    "http",
-    "request",
-    "node",
-    "browser",
-    "XMLHttpRequest",
-    "ajax",
-    "xhr"
-  ],
   "dependencies": {
-    "fpx": "^0.5",
-    "posterus": "^0.4"
+    "fpx": "^0.5"
   },
   "devDependencies": {
     "babel-core": "6.25.0",
@@ -50,5 +33,21 @@
     "gulp-load-plugins": "1.5.0",
     "gulp-uglify": "3.0.0",
     "gulp-watch": "4.3.11"
-  }
+  },
+  "description": "Lightweight library for making HTTP requests in Node.js and browsers",
+  "keywords": [
+    "http",
+    "request",
+    "node",
+    "browser",
+    "XMLHttpRequest",
+    "ajax",
+    "xhr"
+  ],
+  "author": "Mitranim <me@mitranim.com>",
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/Mitranim/xhttp.git"
+  },
+  "license": "WTFPL"
 }

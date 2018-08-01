@@ -83,7 +83,7 @@
     "no-with": "error",
     "radix": "error",
     "require-await": "error",
-    "init-declarations": ["error", "always"],
+    // "init-declarations": ["error", "always"],
     "no-delete-var": "error",
     "no-restricted-globals": ["error",
       // window (browser)
@@ -180,7 +180,7 @@
     "no-useless-rename": "error",
     "no-var": "error",
     "object-shorthand": "error",
-    "prefer-const": "error",
+    // "prefer-const": "error",
     "prefer-numeric-literals": "error",
     "prefer-spread": "error",
     "prefer-template": "error",

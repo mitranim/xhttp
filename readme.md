@@ -15,7 +15,7 @@ Toolkit for `XMLHttpRequest`, the browser API for making HTTP requests. Makes it
 Difference from other similar libraries:
   * keeps the `XMLHttpRequest` object accessible
   * no premature branching: one callback with one argument
-  * doesn't force promises (easy to add)
+  * doesn't mandate promises (easy to add)
 
 Small (≈220 LoC) and dependency-free. Compatible with IE9+.
 
@@ -355,7 +355,11 @@ httpRequest(params)
 
 ## Changelog
 
-### 0.9.0 → 0.10.0
+### 0.11.0
+
+See [readme-node.md#changelog](readme-node.md#changelog).
+
+### 0.10.0
 
 See [readme-node.md#changelog](readme-node.md#changelog).
 
