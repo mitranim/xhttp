@@ -179,7 +179,7 @@ Lowest-level API in this library.
 
 Makes a request, calling `done(err, response)` as soon as it receives the response headers. `response.body` is a [readable stream](https://nodejs.org/api/stream.html#stream_class_stream_readable) that's still being downloaded.
 
-See [Signatures](#signatures) for the params and response structure.
+Returns a [ClientRequest](https://nodejs.org/api/http.html#http_class_http_clientrequest). See [Signatures](#signatures) for the params and response structure.
 
 ```js
 xhttp.streamingRequest({url: '<some url>'}, (err, response) => {
@@ -197,7 +197,7 @@ req.abort()
 
 ### `bufferedRequest(params, done)`
 
-Makes a request, calling `done(err, response)` after fully downloading `response.body` as a Node `Buffer` (raw bytes). See [Signatures](#signatures) for the params and response structure.
+Makes a request, calling `done(err, response)` after fully downloading `response.body` as a Node `Buffer` (raw bytes). Returns a [ClientRequest](https://nodejs.org/api/http.html#http_class_http_clientrequest). See [Signatures](#signatures) for the params and response structure.
 
 ```js
 xhttp.bufferedRequest({url: '<some url>'}, (err, response) => {
@@ -207,7 +207,7 @@ xhttp.bufferedRequest({url: '<some url>'}, (err, response) => {
 
 ### `textRequest(params, done)`
 
-Makes a request, calling `done(err, response)` after fully downloading `response.body` as a string. See [Signatures](#signatures) for the params and response structure.
+Makes a request, calling `done(err, response)` after fully downloading `response.body` as a string. Returns a [ClientRequest](https://nodejs.org/api/http.html#http_class_http_clientrequest). See [Signatures](#signatures) for the params and response structure.
 
 ```js
 xhttp.textRequest({url: '<some url>'}, (err, response) => {
@@ -221,7 +221,7 @@ Makes a request, encoding `params.body` as JSON and adding the appropriate reque
 
 Fully buffers the response body and attempts to decode it as JSON if the _response headers_ (not the request headers) have the `application/json` content type. Calls `done(err, response)` when finished.
 
-See [Signatures](#signatures) for the params and response structure.
+Returns a [ClientRequest](https://nodejs.org/api/http.html#http_class_http_clientrequest). See [Signatures](#signatures) for the params and response structure.
 
 ```js
 xhttp.jsonRequest({
