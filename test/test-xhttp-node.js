@@ -39,12 +39,14 @@ async function runTest() {
 }
 
 async function testGet() {
-  const search = '?message=hello_world'
-  const hash = '#hash'
+  const search = '?one=two'
+  const query = {three: 'four', five: '', six: null, seven: undefined}
+  const hash = '#eight'
 
   const response = await errbackPromise(done => {
     xhttp.streamingRequest({
       url: `${HOST}${search}${hash}`,
+      query,
     }, done)
   })
 
@@ -56,7 +58,7 @@ async function testGet() {
   })
 
   assert.ok(Buffer.isBuffer(body), `Expected buffer`)
-  assert.deepEqual(String(body), `${search}${hash}`)
+  assert.deepEqual(String(body), `${search}&three=four&five=${hash}`)
 }
 
 async function testPostPlainBody() {

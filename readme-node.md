@@ -147,12 +147,15 @@ Request params must look like this:
 ```ts
 interface Params {
   url: string
+  query: ?{[string]: string}
   method: ?string
   headers: ?{[string]: string}
   timeout: ?number
   body: ?Stream|Buffer|string
 }
 ```
+
+If provided, `query` is formdata-encoded and appended to the URL after a `?`.
 
 The response provided to the callback looks like this:
 
@@ -277,6 +280,21 @@ function textRequest(params) {
 ```
 
 ## Changelog
+
+### 0.12.0
+
+Params now accept a dict of query parameters that are automatically formdata-encoded and appended to the URL:
+
+```
+xhttp.bufferedRequest({
+  url: 'https://google.com/search',
+  query: {q: 'test'},
+}, (err, response) => {
+  // ...
+})
+```
+
+This makes a request to `https://google.com/search?q=test`.
 
 ### 0.11.0
 

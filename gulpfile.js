@@ -40,7 +40,7 @@ gulp.task('compile', () => (
     }))
     .pipe(gulp.dest(distDir))
     // Ensures ES5 compliance and lets us measure minified size
-    .pipe($.uglify({
+    .pipe($.terser({
       mangle: {toplevel: true},
       compress: {warnings: false},
     }))

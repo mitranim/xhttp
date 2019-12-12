@@ -123,7 +123,7 @@ const formdataTypeHeaders = {'content-type': 'application/x-www-form-urlencoded;
 
 function runXhrSync(params) {
   let result = null
-  return [xhttp.Xhttp(params, x => {result = x}), result]
+  return [xhttp.request(params, x => {result = x}), result]
 }
 
 /**
@@ -137,7 +137,7 @@ basic_usage: {
     headers: baseResponseHeaders,
     body: '',
   }
-  const [xhr, result] = runXhrSync({url: '/'})
+  const [xhr, result] = runXhrSync({url: '/endpoint'})
 
   assert.ok(xhr instanceof XMLHttpRequest, `Expected an XMLHttpRequest instance`)
 
@@ -146,7 +146,7 @@ basic_usage: {
     // mock event
     event: {target: xhr, type: 'load'},
     // parsed params
-    params: {rawParams: {url: '/'}, method: 'GET', url: '/', headers: {}, body: null},
+    params: {rawParams: {url: '/endpoint'}, method: 'GET', url: '/endpoint', headers: {}, body: null},
     complete: true,
     completedAt: result.completedAt,
     reason: 'load',
@@ -158,7 +158,7 @@ basic_usage: {
   }
 
   assert.deepEqual(result, resultTemplate,
-`Xhttp result failed to match expected template.
+`request result failed to match expected template.
 Got:
 ${show(result)}
 Expected:
@@ -179,7 +179,7 @@ passthrough_request_body: {
     body: '',
   }
   const [{mock: {request}}] = runXhrSync({
-    url: '/',
+    url: '/endpoint',
     method: 'post',
     body: {msg: 'hello'},
   })
@@ -194,7 +194,7 @@ encode_request_body_json: {
     body: '',
   }
   const [{mock: {request}}] = runXhrSync({
-    url: '/',
+    url: '/endpoint',
     method: 'post',
     headers: jsonTypeHeaders,
     body: {msg: 'hello'},
@@ -202,7 +202,7 @@ encode_request_body_json: {
   assert.deepEqual(request.body, JSON.stringify({msg: 'hello'}))
 }
 
-encode_request_body_formdata: {
+encode_request_query_formdata: {
   XMLHttpRequest.nextResponse = {
     status: 200,
     statusText: 'OK',
@@ -210,12 +210,12 @@ encode_request_body_formdata: {
     body: '',
   }
   const [{mock: {request}}] = runXhrSync({
-    url: '/',
+    url: '/endpoint',
     method: 'post',
     headers: formdataTypeHeaders,
-    body: {msg: 'hello world'},
+    query: {one: 'two', three: '', four: null, five: undefined},
   })
-  assert.deepEqual(request.body, 'msg=hello%20world')
+  assert.deepEqual(request.url, '/endpoint?one=two&three=')
 }
 
 encode_request_body_readonly_formdata: {
@@ -230,32 +230,35 @@ encode_request_body_readonly_formdata: {
 
   for (const method of ['get', 'head', 'options']) {
     const [{mock: {request}}] = runXhrSync({
-      url: '/',
+      url: '/endpoint',
       method,
-      body: {msg: 'hello'},
+      query: {one: 'two'},
+      body: {three: 'four'},
     })
     assert.deepEqual(request.body, null)
-    assert.deepEqual(request.url, '/?msg=hello')
+    assert.deepEqual(request.url, '/endpoint?one=two')
   }
 
   for (const method of ['get', 'head', 'options']) {
     const [{mock: {request}}] = runXhrSync({
-      url: '/?blah=blah',
+      url: '/endpoint?one=two',
       method,
-      body: {msg: 'hello world'},
+      query: {three: 'four'},
+      body: {five: 'six'},
     })
     assert.deepEqual(request.body, null)
-    assert.deepEqual(request.url, '/?blah=blah&msg=hello%20world')
+    assert.deepEqual(request.url, '/endpoint?one=two&three=four')
   }
 
   for (const method of ['post', 'put', 'patch', 'delete']) {
     const [{mock: {request}}] = runXhrSync({
-      url: '/',
+      url: '/endpoint',
       method,
-      body: {msg: 'hello world'},
+      query: {one: 'two'},
+      body: {three: 'four'},
     })
-    assert.deepEqual(request.body, {msg: 'hello world'})
-    assert.deepEqual(request.url, '/')
+    assert.deepEqual(request.body, {three: 'four'})
+    assert.deepEqual(request.url, '/endpoint?one=two')
   }
 }
 
@@ -267,7 +270,7 @@ passthrough_response_body: {
     headers: baseResponseHeaders,
     body,
   }
-  const [__, response] = runXhrSync({url: '/'})
+  const [__, response] = runXhrSync({url: '/endpoint'})
   assert.deepEqual(response.body, body)
 }
 
@@ -279,7 +282,7 @@ parse_response_body_json: {
     headers: patch(baseResponseHeaders, jsonTypeHeaders),
     body,
   }
-  const [__, response] = runXhrSync({url: '/'})
+  const [__, response] = runXhrSync({url: '/endpoint'})
   assert.deepEqual(response.body, {msg: 'hello'})
 }
 
@@ -289,7 +292,7 @@ not_ok: {
     headers: patch(baseResponseHeaders, jsonTypeHeaders),
     body: JSON.stringify({msg: 'UR MOM IS FAT'}),
   }
-  const [__, {complete, reason, status, ok, body}] = runXhrSync({url: '/'})
+  const [__, {complete, reason, status, ok, body}] = runXhrSync({url: '/endpoint'})
 
   assert.deepEqual(complete, true)
   assert.deepEqual(reason, 'load')
@@ -300,7 +303,7 @@ not_ok: {
 
 detect_abort: {
   XMLHttpRequest.nextResponse = {status: 0, reason: 'abort', headers: baseResponseHeaders, body: ''}
-  const [__, {complete, ok, reason}] = runXhrSync({url: '/'})
+  const [__, {complete, ok, reason}] = runXhrSync({url: '/endpoint'})
   assert.deepEqual(complete, true)
   assert.deepEqual(ok, false)
   assert.deepEqual(reason, 'abort')
@@ -308,7 +311,7 @@ detect_abort: {
 
 detect_error: {
   XMLHttpRequest.nextResponse = {status: 0, reason: 'error', headers: baseResponseHeaders, body: ''}
-  const [__, {complete, ok, reason}] = runXhrSync({url: '/'})
+  const [__, {complete, ok, reason}] = runXhrSync({url: '/endpoint'})
   assert.deepEqual(complete, true)
   assert.deepEqual(ok, false)
   assert.deepEqual(reason, 'error')
@@ -316,7 +319,7 @@ detect_error: {
 
 detect_timeout: {
   XMLHttpRequest.nextResponse = {status: 0, reason: 'timeout', headers: baseResponseHeaders, body: ''}
-  const [__, {complete, ok, reason}] = runXhrSync({url: '/'})
+  const [__, {complete, ok, reason}] = runXhrSync({url: '/endpoint'})
   assert.deepEqual(complete, true)
   assert.deepEqual(ok, false)
   assert.deepEqual(reason, 'timeout')

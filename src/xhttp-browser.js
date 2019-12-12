@@ -2,7 +2,7 @@
  * Public
  */
 
-export function Xhttp(params, fun) {
+export function request(params, fun) {
   validate(params, isDict)
   validate(fun, isFunction)
 
@@ -28,7 +28,7 @@ export function transformParams(params) {
   return patch(params, {
     rawParams: params,
     method,
-    url: encodeUrl(params.url, method, params.body),
+    url: appendQuery(params.url, params.query),
     headers: isDict(params.headers) ? params.headers : {},
     body: encodeBody(params.body, method, findContentType(params.headers)),
   })
@@ -121,12 +121,6 @@ function isReadOnly(method) {
   return !method || /GET|HEAD|OPTIONS/i.test(method)
 }
 
-function encodeUrl(url, method, body) {
-  return isReadOnly(method) && isDict(body)
-    ? appendQuery(url, body)
-    : url
-}
-
 function findContentType(headers) {
   for (const key in headers) {
     if (/content-type/i.test(key)) return headers[key]
@@ -135,13 +129,16 @@ function findContentType(headers) {
 }
 
 function encodeBody(body, method, contentType) {
-  return isReadOnly(method)
-    ? undefined
-    : /application\/json/i.test(contentType) && isJSONEncodable(body)
-    ? JSON.stringify(body)
-    : /application\/x-www-form-urlencoded/i.test(contentType) && isDict(body)
-    ? formdataEncode(body)
-    : body
+  if (isReadOnly(method)) {
+    return undefined
+  }
+  if (/application\/json/i.test(contentType) && isJSONEncodable(body)) {
+    return JSON.stringify(body)
+  }
+  if (/application\/x-www-form-urlencoded/i.test(contentType) && isDict(body)) {
+    return formdataEncode(body)
+  }
+  return body
 }
 
 export function isJSONEncodable(value) {
@@ -152,24 +149,21 @@ export function isStatusOk(status) {
   return status >= 200 && status <= 299
 }
 
-function appendQuery(url, queryDict) {
+export function appendQuery(url, queryDict) {
   const search = formdataEncode(queryDict)
-  return !search
-    ? url
-    : /\?/.test(url)
-    ? `${url}&${search}`
-    : `${url}?${search}`
+  if (!search) return url
+  if (/\?/.test(url)) return `${url}&${search}`
+  return `${url}?${search}`
 }
 
 export function formdataEncode(dict) {
+  if (dict == null) return ''
+  validate(dict, isDict)
   const pairs = []
-  if (isDict(dict)) {
-    for (const key in dict) {
-      const value = dict[key]
-      if (key && value != null && value !== '') {
-        pairs.push(`${encodeURIComponent(key)}=${encodeURIComponent(value)}`)
-      }
-    }
+  for (const key in dict) {
+    const value = dict[key]
+    if (!key || value == null) continue
+    pairs.push(`${encodeURIComponent(key)}=${encodeURIComponent(value)}`)
   }
   return pairs.join('&')
 }

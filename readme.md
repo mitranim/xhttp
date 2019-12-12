@@ -24,7 +24,7 @@ Small (≈220 LoC) and dependency-free. Compatible with IE9+.
 * [Why](#why)
 * [Installation](#installation)
 * [API](#api)
-  * [`Xhttp`](#xhttpparams-fun)
+  * [`request`](#requestparams-fun)
   * [Params](#params)
   * [Response](#response)
   * [Encoding and Parsing](#encoding-and-parsing)
@@ -46,7 +46,7 @@ Most ajax libraries make the same mistakes `jQuery.ajax` did, plus more:
   * multiple arguments instead of one result
   * unnecessary "middleware" callbacks
 
-JavaScript forces callbacks for asynchonous actions. This alone is bad enough. _Multiple_ callbacks for one action borders on masochism. It causes people to invent additional "finally"-style callbacks just to hack around the fact they have branched prematurely. `xhttp` lets you have a single callback (see [`Xhttp`](#xhttpparams-fun)). One continuation is better than many; it's never too late to branch!
+JavaScript forces callbacks for asynchonous actions. This alone is bad enough. _Multiple_ callbacks for one action borders on masochism. It causes people to invent additional "finally"-style callbacks just to hack around the fact they have branched prematurely. `xhttp` lets you have a single callback (see [`request`](#requestparams-fun)). One continuation is better than many; it's never too late to branch!
 
 Other libraries spread results over multiple arguments (body, xhr etc.). `xhttp` bundles it all into a single value (see [Response](#response)), which is convenient for further API adaptations. Adding a [Promise-based](#promises) API becomes trivial.
 
@@ -72,19 +72,19 @@ npm install --exact xhttp
 Requires a module bundler such as Webpack or Rollup. Available in ES2015 and CommonJS formats; your bundler should automatically pick the appropriate one.
 
 ```js
-import {Xhttp} from 'xhttp'
+import * as xhttp from 'xhttp'
 ```
 
 ## API
 
-### `Xhttp(params, fun)`
+### `request(params, fun)`
 
 Starts a request and returns the `XMLHttpRequest` object. The params must be a dictionary following the [Params](#params) format. When the request ends _for any reason_, the callback receives a [`Response`](#response) dictionary.
 
 ```js
 import * as xhttp from 'xhttp'
 
-const xhr = xhttp.Xhttp({url: '/'}, ({ok, status, reason, headers, body}) => {
+const xhr = xhttp.request({url: '/'}, ({ok, status, reason, headers, body}) => {
   if (ok) console.info('Success:', body)
   else console.warn('Failure:', body)
 })
@@ -92,7 +92,7 @@ const xhr = xhttp.Xhttp({url: '/'}, ({ok, status, reason, headers, body}) => {
 
 Note: there's no "success" or "failure" callbacks. You can branch based on the `status` code, the `reason` the request was stopped, or the shorthand `ok` which means `reason === 'load'` and `status` between 200 and 299.
 
-If you're doing something less common, such as sending and receiving binary data, or tracking upload / download progress, you're meant to re-assemble an alternative to `Xhttp` using the provided lower-level functions. Example:
+If you're doing something less common, such as sending and receiving binary data, or tracking upload / download progress, you're meant to re-assemble an alternative to `request` using the provided lower-level functions. Example:
 
 ```js
 import * as xhttp from 'xhttp'
@@ -115,19 +115,23 @@ See [Misc Utils](#misc-utils) for more examples.
 
 ### Params
 
-The expected structure of the configuration dictionary passed to `xhttp` functions such as [`Xhttp`](#xhttpparams-fun).
+The expected structure of the configuration dictionary passed to `xhttp` functions such as [`request`](#requestparams-fun).
 
 ```ts
 interface Params {
-  // Required. For GET and HEAD, `Xhttp` and `transformParams` automatically
-  // form-encode the body and append it to the url. See Encoding and Parsing.
+  // Required. May contain query parameters, but you should pass them using the
+  // `query` param, see below.
   url: string
+
+  // Optional dict of query parameters. Automatically form-encoded and appended
+  // to the URL after a `?`. See Encoding and Parsing.
+  query: ?{[string]: any}
 
   method: ?string
   headers: ?{[string]: string}
 
-  // `Xhttp` and `transformParams` may automatically encode this, depending
-  // on method and headers. See Encoding and Parsing.
+  // May be automatically encoded, depending on the method and headers. See
+  // Encoding and Parsing.
   body: any
 
   username: ?string
@@ -137,7 +141,7 @@ interface Params {
 
 ### Response
 
-This structure is passed to the [`Xhttp`](#xhttpparams-fun) callback. Can be created manually by calling [`eventToResponse`](#eventtoresponseevent) on any `XMLHttpRequest` event.
+This structure is passed to the [`request`](#requestparams-fun) callback. Can be created manually by calling [`eventToResponse`](#eventtoresponseevent) on any `XMLHttpRequest` event.
 
 ```ts
 interface Response {
@@ -177,15 +181,15 @@ interface Response {
 
 ### Encoding and Parsing
 
-`xhttp` automatically encodes and decodes some common formats, depending on method, request headers, and response headers.
+`xhttp` automatically encodes query parameters and some body types, and decodes some common formats, depending on method, request headers, and response headers.
 
-If the method is read-only (GET, HEAD or OPTIONS) and the body is a plain dict, it's automatically formdata-encoded and appended to the URL as "search" after `?`.
+`params.query`, if provided, must be a plain dict; it's automatically formdata-encoded and appended to the URL after `?`.
 
-If the method is _not_ read-only:
+If the request is read-only (GET/HEAD/OPTIONS), the body is ignored.
 
-  * If the headers specify the JSON content type (`application/json`) and the body is a plain dict or list, it's automatically JSON-encoded. Primitives and special objects are passed unchanged.
+If the headers specify the JSON content type (`application/json`) and the body is a plain dict or list, it's automatically JSON-encoded. Primitives and non-plain objects are passed unchanged.
 
-  * If the headers specify the formdata content type (`application/x-www-form-urlencoded`) and the body is a plain dict, it's automatically formdata-encoded.
+If the headers specify the formdata content type (`application/x-www-form-urlencoded`) and the body is a plain dict, it's automatically formdata-encoded.
 
 If the `content-type` header in the _response_ contains `application/json`, the response body is automatically JSON-parsed. Otherwise it's returned as a string. (Note: prior to `0.8.0` it also parsed XML and HTML into DOM structures; not anymore.)
 
@@ -193,25 +197,20 @@ Pay attention to your headers. You may want to write a tiny wrapper to add defau
 
 ### Misc Utils
 
-`xhttp` exports a few building blocks for re-assembling a custom version of `Xhttp`.
+`xhttp` exports a few building blocks for re-assembling a custom version of `request`.
 
 Suppose you want to track upload / download progress. It's not worth doing in every request, so you'll probably want a separate function:
 
 ```js
-import {
-  transformParams,
-  start,
-  eventToResponse,
-  getResponseBody,
-} from 'xhttp'
+import * as xhttp from 'xhttp'
 
 export function trackingHttpRequest(params, onDone, onUpload, onDownload) {
   const xhr = new XMLHttpRequest()
-  params = transformParams(params)
+  params = xhttp.transformParams(params)
 
-  start(xhr, transformParams(params), event => {
-    const response = eventToResponse(event)
-    response.body = getResponseBody(xhr)
+  xhttp.start(xhr, params, event => {
+    const response = xhttp.eventToResponse(event)
+    response.body = xhttp.getResponseBody(xhr)
     onDone(response)
   })
 
@@ -222,11 +221,11 @@ export function trackingHttpRequest(params, onDone, onUpload, onDownload) {
 }
 ```
 
-`xhttp` exports a few even lower-level functions, which are not documented here. If you're going that deep, you're probably more likely to use the native APIs or read the source.
+`xhttp` also exports a few even lower-level functions, which are not documented here. If you're going that deep, you're probably more likely to use the native APIs or read the source.
 
 #### `transformParams(params)`
 
-Takes a [Params](#params) dictionary and returns a well-formed version of it, possibly encoding the body and/or URL. Should be used for a custom version of `Xhttp`. See the example above.
+Takes a [Params](#params) dictionary and returns a well-formed version of it, possibly encoding the body and/or URL. Should be used for a custom version of `request`. See the example above.
 
 #### `start(xhr, params, fun)`
 
@@ -240,14 +239,14 @@ Takes a DOM event that fired on an `XMLHttpRequest` object and creates a [Respon
 
 #### `abort(xhr)`
 
-Request cancelation. Same as `xhr.abort()`, but safe to call on nonsense values like `null` or `undefined` without causing an exception.
+Cancels the request. Same as `xhr.abort()`, but safe to call on `null` or `undefined` without causing an exception.
 
 #### `abortSilently(xhr)`
 
 Same as `abort`, but removes the `onabort` listener, if any, before aborting.
 
 ```js
-const xhr = xhttp.Xhttp({url: '/'}, response => {})
+const xhr = xhttp.request({url: '/'}, response => {})
 
 // This triggers the callback
 xhr.abort()
@@ -267,10 +266,10 @@ xhr.send()
 xhr.abort()
 ```
 
-`Xhttp` also attaches an `onabort` event listener. To abort without triggering the callback, remove it first, or use the `abortSilently` function:
+`request` also attaches an `onabort` event listener. To abort without triggering the callback, remove it first, or use the `abortSilently` function:
 
 ```js
-const xhr = xhttp.Xhttp({url: '/'}, response => {})
+const xhr = xhttp.request({url: '/'}, response => {})
 
 xhr.onabort = null
 xhr.abort()
@@ -289,7 +288,7 @@ import * as xhttp from 'xhttp'
 export function httpRequest(params) {
   let resolve
   const promise = new Promise(x => {resolve = x})
-  const xhr = xhttp.Xhttp(params, resolve)
+  const xhr = xhttp.request(params, resolve)
   xhr.promise = promise
   return xhr
 }
@@ -313,7 +312,7 @@ export function httpRequest(params) {
     reject = b
   })
 
-  const xhr = xhttp.Xhttp(params, response => {
+  const xhr = xhttp.request(params, response => {
     if (response.ok) resolve(response)
     else reject(response)
   })
@@ -334,7 +333,7 @@ import {Future} from 'posterus'
 
 export function httpRequest(params) {
   const future = new Future()
-  const xhr = xhttp.Xhttp(params, response => {
+  const xhr = xhttp.request(params, response => {
     if (response.ok) future.settle(null, response)
     else future.settle(response)
   })
@@ -354,6 +353,16 @@ httpRequest(params)
 ```
 
 ## Changelog
+
+### 0.12.0
+
+Breaking:
+
+* renamed `Xhttp` → `request`
+
+* `request` and `transformParams` no longer treat `body` as query params for read-only requests. Now you explicitly pass `params.query` instead. This works for all HTTP methods, not just GET/HEAD/OPTIONS as before.
+
+* Automatic query encoding no longer omits values with empty strings, but does still omit `null` or `undefined` values.
 
 ### 0.11.0
 
