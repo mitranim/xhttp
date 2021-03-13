@@ -1,358 +1,269 @@
 ## Overview
 
-`xhttp` is a pair of lightweight libraries for making HTTP requests in Node.js
-and browsers.
+Lightweight library for making HTTP requests in browser and Node, with a mostly-isomorphic API.
 
-**This readme is for the browser library only.** For the Node.js version, see
-[readme-node.md](readme-node.md).
-
-Not isomorphic: has different APIs for Node and browsers.
-
-## Overview: Browser Library
-
-Toolkit for `XMLHttpRequest`, the browser API for making HTTP requests. Makes it practical and convenient to use.
-
-Difference from other similar libraries:
-  * keeps the `XMLHttpRequest` object accessible
-  * no premature branching: one callback with one argument
-  * doesn't mandate promises (easy to add)
-
-Small (≈220 LoC) and dependency-free. Compatible with IE9+.
+Small (a few kilobytes) and dependency-free. Usable as a native JS module. Does _NOT_ rely on polyfills.
 
 ## TOC
 
 * [Why](#why)
-* [Installation](#installation)
+* [Usage](#usage)
 * [API](#api)
-  * [`request`](#requestparams-fun)
-  * [Params](#params)
-  * [Response](#response)
-  * [Encoding and Parsing](#encoding-and-parsing)
-  * [Misc Utils](#misc-utils)
-* [Cancelation](#cancelation)
-* [Promises](#promises)
+  * [Types](#types)
+    * [`Params`](#params)
+    * [`Response`](#response)
+    * [`ResErr`](#reserr)
+  * [`req(params)`](#reqparams)
+  * [`wait(req)`](#waitreq)
+  * [`resNormal(res)`](#resnormalres)
+  * [`resOnlyOk(res)`](#resonlyokres)
+  * [`resToComplete(res)`](#restocompleteres)
+  * [`resToString(res)`](#restostringres)
+  * [`resFromJson(res)`](#resfromjsonres)
+  * [`paramsToJson(params)`](#paramstojsonparams)
+  * [Undocumented](#undocumented)
 * [Changelog](#changelog)
-* [Misc](#misc)
 
 ## Why
 
-### Why bother?
+* Native APIs are too low-level and error-prone.
+* Other libraries are too bloated.
+* `fetch` is crippled by lack of cancelation and upload/download progress. `xhttp` exposes the underlying `XMLHttpRequest` and `http.ClientRequest` objects to make this available.
 
-Most ajax libraries make the same mistakes `jQuery.ajax` did, plus more:
+## Usage
 
-  * losing access to the `XMLHttpRequest`
-  * premature branching into multiple callbacks
-  * one huge over-configurable function instead of a toolkit
-  * multiple arguments instead of one result
-  * unnecessary "middleware" callbacks
-
-JavaScript forces callbacks for asynchonous actions. This alone is bad enough. _Multiple_ callbacks for one action borders on masochism. It causes people to invent additional "finally"-style callbacks just to hack around the fact they have branched prematurely. `xhttp` lets you have a single callback (see [`request`](#requestparams-fun)). One continuation is better than many; it's never too late to branch!
-
-Other libraries spread results over multiple arguments (body, xhr etc.). `xhttp` bundles it all into a single value (see [Response](#response)), which is convenient for further API adaptations. Adding a [Promise-based](#promises) API becomes trivial.
-
-Many libraries make another big mistake: losing a reference to the underlying `XMLHttpRequest` object, hiding it behind callbacks or a promise. `xhttp` keeps you in control by never hiding the xhr object.
-
-### Why not `fetch`?
-
-(`fetch` is a recently standardised alternative to `XMLHttpRequest`.)
-
-`fetch` is fundamentally broken because it gives you a promise instead of a reference to the HTTP task, hiding a rich, manageable reference behind ephemeral callbacks. As a result, it lacks such vital features as:
-
-  * upload / download progress
-  * ability to abort
-
-It has only one real advantage over `XMLHttpRequest`: streaming the response instead of buffering it all in memory, but this is irrelevant for most uses, and will probably get bolted onto `XMLHttpRequest` some day.
-
-## Installation
-
-```sh
-npm install --exact xhttp
-```
-
-Requires a module bundler such as Webpack or Rollup. Available in ES2015 and CommonJS formats; your bundler should automatically pick the appropriate one.
+The API is mostly isomorphic between browsers and Node.
 
 ```js
-import * as xhttp from 'xhttp'
+import * as h from 'xhttp'
+
+// Elides cancelation for simplicity of example.
+function fetchString(params) {
+  const req = h.req(params)
+  return h.wait(req).then(h.resNormal)
+}
+
+// Elides cancelation for simplicity of example.
+function fetchJson(params) {
+  return fetchString(h.paramsToJson(params)).then(h.resFromJson)
+}
+```
+
+When using native JS modules in a browser without a bundler, import like this:
+
+```js
+import * as h from './node_modules/xhttp/xhttp.mjs'
 ```
 
 ## API
 
-### `request(params, fun)`
+### Types
 
-Starts a request and returns the `XMLHttpRequest` object. The params must be a dictionary following the [Params](#params) format. When the request ends _for any reason_, the callback receives a [`Response`](#response) dictionary.
+#### `Params`
 
-```js
-import * as xhttp from 'xhttp'
+Input to [`req(params)`](#reqparams).
 
-const xhr = xhttp.request({url: '/'}, ({ok, status, reason, headers, body}) => {
-  if (ok) console.info('Success:', body)
-  else console.warn('Failure:', body)
-})
-```
+If `query` is provided, it's automatically encoded into the URL.
 
-Note: there's no "success" or "failure" callbacks. You can branch based on the `status` code, the `reason` the request was stopped, or the shorthand `ok` which means `reason === 'load'` and `status` between 200 and 299.
-
-If you're doing something less common, such as sending and receiving binary data, or tracking upload / download progress, you're meant to re-assemble an alternative to `request` using the provided lower-level functions. Example:
-
-```js
-import * as xhttp from 'xhttp'
-
-export function binaryXhr(params, fun) {
-  const xhr = new XMLHttpRequest()
-  xhr.responseType = 'arraybuffer'
-  xhttp.start(xhr, xhttp.transformParams(params), function onXhrDone(event) {
-    const response = xhttp.eventToResponse(event)
-    response.body = xhr.response
-    fun(response)
-  })
-  return xhr
-}
-
-const xhr = binaryXhr({url: '/'}, ({ok, body}) => {/* ... */})
-```
-
-See [Misc Utils](#misc-utils) for more examples.
-
-### Params
-
-The expected structure of the configuration dictionary passed to `xhttp` functions such as [`request`](#requestparams-fun).
+In browsers, `body` must be anything accepted by `XMLHttpRequest.prototype.send`, which includes strings and `FormData` objects. In Node, `body` must be either a readable stream, a string, or a `Buffer`.
 
 ```ts
 interface Params {
-  // Required. May contain query parameters, but you should pass them using the
-  // `query` param, see below.
-  url: string
-
-  // Optional dict of query parameters. Automatically form-encoded and appended
-  // to the URL after a `?`. See Encoding and Parsing.
-  query: ?{[string]: any}
-
-  method: ?string
-  headers: ?{[string]: string}
-
-  // May be automatically encoded, depending on the method and headers. See
-  // Encoding and Parsing.
-  body: any
-
-  username: ?string
-  password: ?string
+  method?:   string
+  url:       string
+  query?:    {[string]: any}
+  username?: string
+  password?: string
+  timeout?:  number
+  head?:     {[string]: string}
+  body?:     string | Buffer | ReadableStream | FormData
 }
-```
+````
 
-### Response
+#### `Response`
 
-This structure is passed to the [`request`](#requestparams-fun) callback. Can be created manually by calling [`eventToResponse`](#eventtoresponseevent) on any `XMLHttpRequest` event.
+Result of a promise returned by [`wait(req)`](#waitreq). Includes the request and original params.
+
+`ok` is true is the HTTP status was between 200 and 299.
+
+`complete` is true if the HTTP request has completed and the response body has been fully downloaded. In Node, [`wait(req)`](#waitreq) resolves to a response where `complete` is false, and requires [`resToComplete(res)`](#restocompleteres) to make it true.
+
+In browsers, `body` is always a string. In Node, `body` is initially a readable stream, which can be buffered via [`resToComplete(res)`](#restocompleteres) into a `Buffer`, or [`resToString(res)`](#restostringres) into a string. Those functions are available in the browser version for symmetry.
 
 ```ts
 interface Response {
-  // True if `reason` is 'load' and `status` is between 200 and 299
-  ok: boolean
-  status: number
+  req:        XMLHttpRequest | http.ClientRequest
+  type:       string
+  ok:         boolean
+  complete:   boolean
+  status:     number
+  statusText: number
+  head:       {[string]: string}
+  body:       string | Buffer | ReadableStream
+  params:     Params
+}
+````
+
+#### `ResErr`
+
+Thrown by functions like [`resOnlyOk(res)`](#resonlyokres). These errors are always opt-in.
+
+```ts
+class ResErr extends Error {
+  res:        Response
+  status:     number
   statusText: string
-
-  // Response headers, with lowercased keys
-  headers: {[string]: string}
-
-  // Response body, possibly decoded; see Encoding and Parsing.
-  // Response from `eventToResponse` DOES NOT include a body.
-  body: any
-
-  // The DOM event that fired at the end of the request.
-  // The event type is duplicated as `reason`, see below.
-  event: Event
-
-  // The type of the DOM event that fired at the end of the request.
-  // One of:
-  //   'abort'    -- request was aborted
-  //   'error'    -- network error (DNS failure, loss of connection, etc.)
-  //   'load'     -- request ended successfully
-  //   'timeout'  -- request timed out
-  reason: string
-
-  // Parsed request params
-  params: Params
-
-  // Unix timestamp in milliseconds
-  completedAt: number
-
-  xhr: XMLHttpRequest
+  message:    string
 }
 ```
 
-### Encoding and Parsing
+### `req(params)`
 
-`xhttp` automatically encodes query parameters and some body types, and decodes some common formats, depending on method, request headers, and response headers.
+Creates and immediately starts the request with the given [`Params`](#params). You must immediately attach callbacks via [`wait(req)`](#waitreq).
 
-`params.query`, if provided, must be a plain dict; it's automatically formdata-encoded and appended to the URL after `?`.
-
-If the request is read-only (GET/HEAD/OPTIONS), the body is ignored.
-
-If the headers specify the JSON content type (`application/json`) and the body is a plain dict or list, it's automatically JSON-encoded. Primitives and non-plain objects are passed unchanged.
-
-If the headers specify the formdata content type (`application/x-www-form-urlencoded`) and the body is a plain dict, it's automatically formdata-encoded.
-
-If the `content-type` header in the _response_ contains `application/json`, the response body is automatically JSON-parsed. Otherwise it's returned as a string. (Note: prior to `0.8.0` it also parsed XML and HTML into DOM structures; not anymore.)
-
-Pay attention to your headers. You may want to write a tiny wrapper to add default headers to all your requests.
-
-### Misc Utils
-
-`xhttp` exports a few building blocks for re-assembling a custom version of `request`.
-
-Suppose you want to track upload / download progress. It's not worth doing in every request, so you'll probably want a separate function:
+The request can be used for upload/download progress and cancelation.
 
 ```js
-import * as xhttp from 'xhttp'
+const req = h.req({url: 'https://example.com'})
+req.abort()
+```
 
-export function trackingHttpRequest(params, onDone, onUpload, onDownload) {
-  const xhr = new XMLHttpRequest()
-  params = xhttp.transformParams(params)
+### `wait(req)`
 
-  xhttp.start(xhr, params, event => {
-    const response = xhttp.eventToResponse(event)
-    response.body = xhttp.getResponseBody(xhr)
-    onDone(response)
-  })
+Takes a request created by [`req(params)`](#reqparams) and returns a promise that will resolve to a [`Response`](#response).
 
-  xhr.upload.onprogress = onUpload
-  xhr.onprogress = onDownload
+In Node, in case of networks errors (unreachable host), the promise may fail with an error. Otherwise, it will _always_ resolve to a `Response`, even if the request was aborted, timed out, or the server returned a 400-500 error code.
 
-  return xhr
+To filter only "ok" responses, use [`resOnlyOk(res)`](#resonlyokres).
+
+In Node, the response body is a readable stream. For isomorphic behavior, use [`resToString(res)`](#restostringres), available in both environments.
+
+```js
+const req = h.req({url: 'https://example.com'})
+
+const res = await h.wait(req)
+
+console.log(res)
+
+// In Node:
+res.body.pipe(process.stdout)
+```
+
+### `resNormal(res)`
+
+"Normal" request-response: buffers the response body to a string, and ensures that the response has an "ok" status. Otherwise throws a [`ResErr`](#reserr).
+
+Takes and returns a [`Response`](#response), possibly async. Should be used via `.then()`.
+
+```js
+const req = h.req({url: 'https://example.com'})
+
+const res = await h.wait(req).then(h.resNormal)
+
+console.log(res.body)
+```
+
+### `resOnlyOk(res)`
+
+Ensures that the response has an "ok" status. Otherwise throws a [`ResErr`](#reserr).
+
+Takes and returns a [`Response`](#response), possibly async. Should be used via `.then()`.
+
+```js
+// Has a non-"ok" code, but doesn't throw.
+const req = h.req({url: 'https://example.com/404'})
+const res = await h.wait(req)
+console.log(res.status) // 404
+
+// Throws because of `resOnlyOk`.
+try {
+  const req = h.req({url: 'https://example.com/404'})
+  const _ = await h.wait(res).then(h.resOnlyOk)
+}
+catch (err) {
+  console.log(err) // ResErr
 }
 ```
 
-`xhttp` also exports a few even lower-level functions, which are not documented here. If you're going that deep, you're probably more likely to use the native APIs or read the source.
+### `resToComplete(res)`
 
-#### `transformParams(params)`
+In Node, collects the response body into a single `Buffer` or string. In browsers, this is a noop, provided only for symmetry; `XMLHttpRequest` automatically buffers the response body into a string.
 
-Takes a [Params](#params) dictionary and returns a well-formed version of it, possibly encoding the body and/or URL. Should be used for a custom version of `request`. See the example above.
-
-#### `start(xhr, params, fun)`
-
-Starts an existing `XMLHttpRequest` object, using the provided params.
-
-Note: this doesn't transform the params **or** create a response. When the request ends, `fun` is called with the DOM event that fired. You're meant to convert it to a [Response](#response) using [`eventToResponse`](#eventtoresponseevent), or whatever you please. See the example above.
-
-#### `eventToResponse(event)`
-
-Takes a DOM event that fired on an `XMLHttpRequest` object and creates a [Response](#response). Doesn't attempt to read the body, since there's more than one way to do it. See the example above.
-
-#### `abort(xhr)`
-
-Cancels the request. Same as `xhr.abort()`, but safe to call on `null` or `undefined` without causing an exception.
-
-#### `abortSilently(xhr)`
-
-Same as `abort`, but removes the `onabort` listener, if any, before aborting.
+Takes and returns a [`Response`](#response), possibly async. Should be used via `.then()`.
 
 ```js
-const xhr = xhttp.request({url: '/'}, response => {})
+const req = h.req({url: 'https://example.com'})
 
-// This triggers the callback
-xhr.abort()
+const res = await h.wait(req).then(h.resToComplete)
 
-// This doesn't
-xhttp.abortSilently(xhr)
+console.log(res.body)
 ```
 
-## Cancelation
+### `resToString(res)`
 
-`XMLHttpRequest` can be canceled by calling `.abort()`:
+Similar to [`resToComplete(res)`](#restocompleteres). In Node, this buffers the response body into a string (not a `Buffer`). In browsers, this is a noop, provided for symmetry.
+
+Takes and returns a [`Response`](#response), possibly async. Should be used via `.then()`.
 
 ```js
-const xhr = new XMLHttpRequest()
-xhr.open('get', '/')
-xhr.send()
-xhr.abort()
+const req = h.req({url: 'https://example.com'})
+
+const res = await h.wait(req).then(h.resToString)
+
+console.log(res.body)
 ```
 
-`request` also attaches an `onabort` event listener. To abort without triggering the callback, remove it first, or use the `abortSilently` function:
+### `resFromJson(res)`
+
+Invokes `JSON.parse` on the response body. The body must have been already downloaded via [`resToComplete(res)`](#restocompleteres) or [`resToString(res)`](#restostringres). Should be used for _receiving_ JSON. For _sending_ JSON, use [`paramsToJson(params)`](#paramstojsonparams).
+
+Takes and returns a [`Response`](#response), possibly async. Should be used via `.then()`.
 
 ```js
-const xhr = xhttp.request({url: '/'}, response => {})
+const req = h.req({url: '/api/some-json-endpoint'})
 
-xhr.onabort = null
-xhr.abort()
+const res = await h.wait(req)
+  .then(h.resToComplete)
+  .then(h.resFromJson)
 
-// Same as above
-xhttp.abortSilently(xhr)
+console.log(res.body)
 ```
 
-## Promises
+### `paramsToJson(params)`
 
-To use `XMLHttpRequest` with promises, write your own adapter:
+Invokes `JSON.stringify` on the request body, and adds the appropriate `content-type` header. Should be used for _sending_ JSON. For _receiving_ JSON, use [`resFromJson(res)`](#resfromjsonres).
+
+Takes and returns [`Params`](#params).
 
 ```js
-import * as xhttp from 'xhttp'
-
-export function httpRequest(params) {
-  let resolve
-  const promise = new Promise(x => {resolve = x})
-  const xhr = xhttp.request(params, resolve)
-  xhr.promise = promise
-  return xhr
-}
-
-httpRequest({url: '/'}).promise.then(response => {
-  // ...
-})
+const req = h.req(h.paramsToJson({
+  url: '/api/some-json-endpoint',
+  method: 'post',
+  body: {key: 'val'},
+}))
 ```
 
-Branch into `then/catch` if you want:
+### Undocumented
 
-```js
-import * as xhttp from 'xhttp'
-
-export function httpRequest(params) {
-  let resolve
-  let reject
-
-  const promise = new Promise((a, b) => {
-    resolve = a
-    reject = b
-  })
-
-  const xhr = xhttp.request(params, response => {
-    if (response.ok) resolve(response)
-    else reject(response)
-  })
-  xhr.promise = promise
-  return xhr
-}
-
-httpRequest({url: '/'}).promise
-  .then(response => {/* ... */})
-  .catch(response => {/* ... */})
-```
-
-If you want promises with cancelation, consider futures from the [Posterus library](https://github.com/Mitranim/posterus):
-
-```js
-import * as xhttp from 'xhttp'
-import {Future} from 'posterus'
-
-export function httpRequest(params) {
-  const future = new Future()
-  const xhr = xhttp.request(params, response => {
-    if (response.ok) future.settle(null, response)
-    else future.settle(response)
-  })
-  return future.finally(error => {
-    if (error) {
-      xhr.onabort = null
-      xhr.abort()
-    }
-  })
-}
-
-httpRequest(params)
-  .mapResult(response => {/* ... */})
-  .mapError(error => {/* ... */})
-  // produces an error, running the .finally callback and aborting
-  .deinit()
-```
+Many utility functions are exported but undocumented. Peruse the source, looking for `export`.
 
 ## Changelog
+
+### 0.13.0
+
+Breaking:
+
+* The API has been revised, simplified, and made mostly isomorphic between browsers and Node.
+
+* Uses promises to simplify response transformation. Still exposes the underlying request objects, allowing progress tracking and cancelation.
+
+* Provided _only_ as native JS modules. Not compatible with IE or `require`.
+
+Minor improvements:
+
+* Supports lists in queries and headers.
+
+* The Node version is now dependency-free.
 
 ### 0.12.0
 
@@ -375,6 +286,10 @@ See [readme-node.md#changelog](readme-node.md#changelog).
 ### 0.8.0 → 0.9.0
 
 Breaking cleanup in the browser version. Renamed/replaced most lower-level utils (that nobody ever used) to simplify customization. See the Misc Utils section for the new examples. The main `Xhttp` function works the same way, so most users shouldn't notice a difference.
+
+## License
+
+https://unlicense.org
 
 ## Misc
 

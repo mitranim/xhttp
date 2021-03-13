@@ -1,12 +1,9 @@
 {
-  "parser": "babel-eslint",
-  "parserOptions": {
-    "sourceType": "script"
-  },
+  "parserOptions": {"sourceType": "module"},
   "env": {
-    "browser": false,
-    "node": true,
-    "es6": true
+    "es2020": true,
+    "browser": true,
+    "node": true
   },
   "rules": {
     // Logic
@@ -83,7 +80,7 @@
     "no-with": "error",
     "radix": "error",
     "require-await": "error",
-    // "init-declarations": ["error", "always"],
+    "init-declarations": "off",
     "no-delete-var": "error",
     "no-restricted-globals": ["error",
       // window (browser)
@@ -130,7 +127,11 @@
     "func-names": ["error", "as-needed"],
     // "func-style": ["error", "declaration"],
     // "id-length": ["error", {"min": 3}],
-    "indent": ["error", 2, {"SwitchCase": 1}],
+    "indent": ["error", 2, {
+      "SwitchCase": 1,
+      "flatTernaryExpressions": true,
+      "ignoredNodes": ["ConditionalExpression"]
+    }],
     // "key-spacing": ["error", {"align": "value"}],
     // "key-spacing": "error",
     "keyword-spacing": "error",
@@ -153,9 +154,10 @@
     "object-curly-spacing": "error",
     "one-var": ["error", "never"],
     "operator-assignment": ["error", "always"],
-    "operator-linebreak": ["error", "after", {"overrides": {"?": "off", ":": "off"}}],
+    // "operator-linebreak": ["error", "after", {"overrides": {"?": "off", ":": "off"}}],
     "padded-blocks": ["error", "never"],
-    "quote-props": ["error", "as-needed"],
+    // "quote-props": ["error", "as-needed"],
+    "quote-props": "off",
     "quotes": ["error", "single", {"allowTemplateLiterals": true, "avoidEscape": true}],
     "semi": ["error", "never"],
     "space-before-blocks": ["error", "always"],
@@ -180,7 +182,7 @@
     "no-useless-rename": "error",
     "no-var": "error",
     "object-shorthand": "error",
-    // "prefer-const": "error",
+    "prefer-const": "error",
     "prefer-numeric-literals": "error",
     "prefer-spread": "error",
     "prefer-template": "error",

@@ -1,38 +1,18 @@
 {
   "name": "xhttp",
-  "version": "0.12.0",
-  "main": "dist/xhttp-browser.js",
-  "module": "es/xhttp-browser.js",
-  "browser": "es/xhttp-browser.js",
+  "version": "0.13.0",
+  "type": "module",
+  "main": "./node.mjs",
+  "browser": "./xhttp.mjs",
   "scripts": {
-    "start": "gulp",
-    "prepublishOnly": "gulp build"
-  },
-  "dependencies": {
-    "fpx": "^0.7"
+    "test": "node ./test/test.mjs",
+    "lint": "node ./node_modules/.bin/eslint *.mjs **/*.mjs",
+    "prepublishOnly": "NODE_ENV=production npm -s test && npm -s run lint"
   },
   "devDependencies": {
-    "babel-core": "6.25.0",
-    "babel-eslint": "7.2.3",
-    "babel-plugin-check-es2015-constants": "6.22.0",
-    "babel-plugin-transform-es2015-arrow-functions": "6.22.0",
-    "babel-plugin-transform-es2015-block-scoping": "6.24.1",
-    "babel-plugin-transform-es2015-destructuring": "6.23.0",
-    "babel-plugin-transform-es2015-function-name": "6.24.1",
-    "babel-plugin-transform-es2015-literals": "6.22.0",
-    "babel-plugin-transform-es2015-modules-commonjs": "6.24.1",
-    "babel-plugin-transform-es2015-parameters": "6.24.1",
-    "babel-plugin-transform-es2015-shorthand-properties": "6.24.1",
-    "babel-plugin-transform-es2015-spread": "6.22.0",
-    "babel-plugin-transform-es2015-template-literals": "6.22.0",
-    "del": "3.0.0",
-    "eslint_d": "4.2.5",
-    "fancy-log": "1.3.2",
-    "gulp": "4.0.0",
-    "gulp-babel": "7.0.0",
-    "gulp-load-plugins": "1.5.0",
-    "gulp-terser": "1.2.0",
-    "gulp-watch": "4.3.11"
+    "emerge": "0.5.0",
+    "eslint": "7.21.0",
+    "fpx": "0.8.0"
   },
   "description": "Lightweight library for making HTTP requests in Node.js and browsers",
   "keywords": [
@@ -49,5 +29,5 @@
     "type": "git",
     "url": "git://github.com/Mitranim/xhttp.git"
   },
-  "license": "WTFPL"
+  "license": "Unlicense"
 }

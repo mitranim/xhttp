@@ -1,13 +1,7 @@
 /*
-!/lib
-!/src
 !/test
-!/.babelrc
-!/.eslintrc
-!/.gitignore
-!/.npmignore
-!/.gulpfile.js
-!/node.js
 !/package.json
-!/readme-node.md
-!/readme.md
+!/.*rc
+!/.*ignore
+!/*.md
+!/*.mjs

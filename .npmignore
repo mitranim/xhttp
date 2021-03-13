@@ -1,8 +1,2 @@
-/*
-!/lib
-!/src
-!/es
-!/dist
-!/node.js
-!/readme-node.md
-!/readme.md
+*
+!/*.mjs
