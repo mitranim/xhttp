@@ -267,6 +267,8 @@ Minor improvements:
 
 ### 0.12.0
 
+**Browser**:
+
 Breaking:
 
 * renamed `Xhttp` → `request`
@@ -275,17 +277,53 @@ Breaking:
 
 * Automatic query encoding no longer omits values with empty strings, but does still omit `null` or `undefined` values.
 
+**Node**:
+
+Params now accept a dict of query parameters that are automatically formdata-encoded and appended to the URL:
+
+```
+xhttp.bufferedRequest({
+  url: 'https://google.com/search',
+  query: {q: 'test'},
+}, (err, response) => {
+  // ...
+})
+```
+
+This makes a request to `https://google.com/search?q=test`.
+
 ### 0.11.0
 
-See [readme-node.md#changelog](readme-node.md#changelog).
+**Node**:
+
+Breaking: removed futures and the Posterus dependency. The API is now callback-based. The user is expected to add promises/futures/observables/etc. by themselves. This makes us more flexible and lightweight.
 
 ### 0.10.0
 
-See [readme-node.md#changelog](readme-node.md#changelog).
+**Node**:
+
+Minor but breaking cleanup.
+
+  * renamed `httpRequest` → `textRequest`
+  * renamed `okErr` → `httpError`
+  * `textRequest` and `jsonRequest` no longer implicitly use `httpError` to throw on non-200+ responses
+  * an aborted response now has `.reason = 'abort'`, not `.reason = 'aborted'` for mental consistency with its counterpart in the browser library
+
+Also updated dependencies.
 
 ### 0.8.0 → 0.9.0
 
-Breaking cleanup in the browser version. Renamed/replaced most lower-level utils (that nobody ever used) to simplify customization. See the Misc Utils section for the new examples. The main `Xhttp` function works the same way, so most users shouldn't notice a difference.
+**Browser**:
+
+Breaking cleanup. Renamed/replaced most lower-level utils (that nobody ever used) to simplify customization. See the Misc Utils section for the new examples. The main `Xhttp` function works the same way, so most users shouldn't notice a difference.
+
+**Node**:
+
+Breaking: `Response` no longer has a `.stream` property; in a streaming response, the `.body` is a stream.
+
+`bufferBody` and `stringifyBody` now work on anything with a `.body` and don't require the full `Response` structure.
+
+`bufferBody` consistently returns a future.
 
 ## License
 
