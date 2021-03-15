@@ -75,7 +75,7 @@ interface Params {
   username?: string
   password?: string
   timeout?:  number
-  head?:     {[string]: string}
+  headers?:  {[string]: string}
   body?:     string | Buffer | ReadableStream | FormData
 }
 ````
@@ -98,7 +98,7 @@ interface Response {
   complete:   boolean
   status:     number
   statusText: number
-  head:       {[string]: string}
+  headers:    {[string]: string}
   body:       string | Buffer | ReadableStream
   params:     Params
 }
@@ -248,6 +248,10 @@ const req = h.req(h.paramsToJson({
 Many utility functions are exported but undocumented. Peruse the source, looking for `export`.
 
 ## Changelog
+
+### 0.13.2
+
+Revert one of the breaking changes in `0.13.0`: headers are once again called `headers`, rather than `head`, for consistency with Node's convention.
 
 ### 0.13.1
 

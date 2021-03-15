@@ -24,14 +24,14 @@ export function testCommon(h) {
     const params = {
       method: 'post',
       url: '/',
-      head: {'connection': 'keep-alive'},
+      headers: {'connection': 'keep-alive'},
       body: {key: 'val'},
     }
 
     t.eqDicts(h.paramsToJson(params), {
       method: 'post',
       url: '/',
-      head: {
+      headers: {
         'connection': 'keep-alive',
         'content-type': 'application/json',
       },
@@ -44,7 +44,7 @@ export function testCommon(h) {
       type: 'load',
       status: 200,
       ok: true,
-      head: {'connection': 'keep-alive'},
+      headers: {'connection': 'keep-alive'},
       body: '{"key":"val"}',
     }
 
@@ -52,7 +52,7 @@ export function testCommon(h) {
       type: 'load',
       status: 200,
       ok: true,
-      head: {'connection': 'keep-alive'},
+      headers: {'connection': 'keep-alive'},
       bodyText: '{"key":"val"}',
       body: {key: 'val'},
     })

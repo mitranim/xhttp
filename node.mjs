@@ -88,10 +88,10 @@ export function resFromJson(res) {
 
 export function paramsToJson(params) {
   validate(params, isParams)
-  const {head, body, ...rest} = params
+  const {headers, body, ...rest} = params
   return {
     ...rest,
-    head: {...onlyDict(head), 'content-type': 'application/json'},
+    headers: {...onlyDict(headers), 'content-type': 'application/json'},
     body: JSON.stringify(body),
   }
 }
@@ -281,10 +281,10 @@ function isUrlHttps(url) {
   return url.startsWith('https://')
 }
 
-function normalizeParams({username, password, head, ...rest}) {
+function normalizeParams({username, password, headers, ...rest}) {
   return {
     auth: maybeAuth(username, password),
-    headers: onlyDict(head),
+    headers: onlyDict(headers),
     ...rest,
   }
 }
@@ -299,7 +299,7 @@ function maybeAuth(user, pass) {
 }
 
 function streamRes(req, nodeRes) {
-  const {statusCode: status, statusMessage: statusText, headers: head} = nodeRes
+  const {statusCode: status, statusMessage: statusText, headers} = nodeRes
   return {
     req,
     type: 'load',
@@ -307,7 +307,7 @@ function streamRes(req, nodeRes) {
     complete: false,
     status,
     statusText,
-    head: onlyDict(head),
+    headers: onlyDict(headers),
     body: nodeRes,
     params: req.params,
   }
@@ -321,7 +321,7 @@ function timeoutRes(req) {
     complete: false,
     status: 408,
     statusText: 'request timeout',
-    head: {},
+    headers: {},
     body: '',
     params: req.params,
   }
@@ -335,7 +335,7 @@ function clientAbortRes(req) {
     complete: false,
     status: 0,
     statusText: 'aborted by client',
-    head: {},
+    headers: {},
     body: '',
     params: req.params,
   }

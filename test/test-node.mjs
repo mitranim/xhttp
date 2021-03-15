@@ -53,7 +53,7 @@ async function runNodeTest() {
       query: {qKeyOne: 'qValOne', qKeyTwo: ['qValTwoOne', 'qValTwoTwo']},
       username: 'user',
       password: 'pass',
-      head: {hKeyOne: 'hValOne', hKeyTwo: ['hValTwoOne', 'hValTwoTwo']},
+      headers: {hKeyOne: 'hValOne', hKeyTwo: ['hValTwoOne', 'hValTwoTwo']},
       body: 'bodyText',
     }
 
@@ -71,20 +71,20 @@ async function runNodeTest() {
       complete: false,
       status: 200,
       statusText: 'OK',
-      head: res.head,
+      headers: res.headers,
       body: res.body,
       params,
     })
 
-    // CBA to test the head content: Node adds a bunch of junk.
-    f.validate(res.head, f.isDict)
+    // CBA to test the headers content: Node adds a bunch of junk.
+    f.validate(res.headers, f.isDict)
     f.validateInstance(res.body, st.Readable)
 
     const body = JSON.parse(await h.bufferStream(res.body))
 
     t.eqDicts(body, {
       path: '/four?five&qKeyOne=qValOne&qKeyTwo=qValTwoOne&qKeyTwo=qValTwoTwo',
-      head: {
+      headers: {
         hkeyone: 'hValOne',
         hkeytwo: 'hValTwoOne, hValTwoTwo',
       },
@@ -103,7 +103,7 @@ async function runNodeTest() {
       complete: true,
       status: 200,
       statusText: 'OK',
-      head: res.head,
+      headers: res.headers,
       body: res.body,
       params,
     })
@@ -111,7 +111,7 @@ async function runNodeTest() {
     f.validateInstance(res.body, Buffer)
     t.eq(JSON.parse(res.body), {
       path: '/',
-      head: {},
+      headers: {},
     })
   }()
 
@@ -127,12 +127,12 @@ async function runNodeTest() {
       complete: true,
       status: 200,
       statusText: 'OK',
-      head: res.head,
+      headers: res.headers,
       body: res.body,
       params,
     })
 
-    t.eq(res.body, `{"path":"/","head":{}}`)
+    t.eq(res.body, `{"path":"/","headers":{}}`)
   }()
 
   await async function testAbort() {
@@ -150,7 +150,7 @@ async function runNodeTest() {
       complete: false,
       status: 0,
       statusText: 'aborted by client',
-      head: {},
+      headers: {},
       body: '',
       params,
     })
@@ -169,12 +169,12 @@ async function runNodeTest() {
         complete: true,
         status: 200,
         statusText: 'OK',
-        head: res.head,
+        headers: res.headers,
         body: res.body,
         params,
       })
 
-      t.eq(JSON.parse(res.body), {path: '/', head: {}})
+      t.eq(JSON.parse(res.body), {path: '/', headers: {}})
     }()
 
     await async function testResOnlyCompleteFail() {
@@ -193,7 +193,7 @@ async function runNodeTest() {
         complete: false,
         status: 0,
         statusText: 'aborted by client',
-        head: {},
+        headers: {},
         body: '',
         params,
       })
@@ -213,12 +213,12 @@ async function runNodeTest() {
         complete: true,
         status: 200,
         statusText: 'OK',
-        head: res.head,
+        headers: res.headers,
         body: res.body,
         params,
       })
 
-      t.eq(JSON.parse(res.body), {path: '/', head: {}})
+      t.eq(JSON.parse(res.body), {path: '/', headers: {}})
     }()
 
     await async function testResOnlyOkFail() {
@@ -235,12 +235,12 @@ async function runNodeTest() {
         complete: true,
         status: 404,
         statusText: 'Not Found',
-        head: err.res.head,
+        headers: err.res.headers,
         body: err.res.body,
         params,
       })
 
-      t.eq(JSON.parse(err.res.body), {path: '/404', head: {}})
+      t.eq(JSON.parse(err.res.body), {path: '/404', headers: {}})
     }()
   }()
 
@@ -262,7 +262,7 @@ async function runNodeTest() {
       complete: true,
       status: 200,
       statusText: 'OK',
-      head: res.head,
+      headers: res.headers,
       body: res.body,
       params,
     })
@@ -270,12 +270,12 @@ async function runNodeTest() {
 }
 
 function handleRequest(req, res) {
-  const {url: path, headers} = req
-  const head = trimHead(headers)
+  const path = req.url
+  const headers = trimHeaders(req.headers)
 
   if (req.method === 'GET') {
     if (req.url === '/404') res.writeHeader(404)
-    res.end(JSON.stringify({path, head}))
+    res.end(JSON.stringify({path, headers}))
     return
   }
 
@@ -283,7 +283,7 @@ function handleRequest(req, res) {
   h.bufferStream(res.body)
     .then(String)
     .then(body => {
-      res.end(JSON.stringify({path, head, body}))
+      res.end(JSON.stringify({path, headers, body}))
     })
     .catch(err => {
       res.end(err)
@@ -291,6 +291,6 @@ function handleRequest(req, res) {
 }
 
 // Removes headers automatically added by Node.
-function trimHead({host: __, authorization: ___, connection: ____, ...rest}) {
+function trimHeaders({host: __, authorization: ___, connection: ____, ...rest}) {
   return rest
 }

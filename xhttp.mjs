@@ -13,7 +13,7 @@ export function start(req, params) {
   validate(req, isReq)
   validate(params, isParams)
 
-  const {method, url, query, username, password, timeout, head, body} = params
+  const {method, url, query, username, password, timeout, headers, body} = params
   if (method) validate(method, isString)
 
   req.params = params
@@ -22,7 +22,7 @@ export function start(req, params) {
   if (timeout) req.timeout = timeout
 
   req.open(method || 'get', urlWithQuery(url, query), true, username, password)
-  sendHead(req, head)
+  sendHead(req, headers)
   req.send(body)
 }
 
@@ -68,10 +68,10 @@ export function resFromJson(res) {
 
 export function paramsToJson(params) {
   validate(params, isParams)
-  const {head, body, ...rest} = params
+  const {headers, body, ...rest} = params
   return {
     ...rest,
-    head: {...onlyDict(head), 'content-type': 'application/json'},
+    headers: {...onlyDict(headers), 'content-type': 'application/json'},
     body: JSON.stringify(body),
   }
 }
@@ -240,15 +240,15 @@ function eventToRes(event) {
     complete,
     status,
     statusText,
-    head: headParse(req.getAllResponseHeaders()),
+    headers: headParse(req.getAllResponseHeaders()),
     body: req.responseText,
     params: req.params,
   }
 }
 
-function sendHead(req, head) {
-  head = onlyDict(head)
-  for (const key in head) sendHeader(req, key, head[key])
+function sendHead(req, headers) {
+  headers = onlyDict(headers)
+  for (const key in headers) sendHeader(req, key, headers[key])
 }
 
 function sendHeader(req, key, val) {
@@ -288,14 +288,14 @@ function urlWithoutHash(url) {
   return ind >= 0 ? url.slice(0, ind) : url
 }
 
-function headParse(head) {
-  validate(head, isString)
+function headParse(headers) {
+  validate(headers, isString)
 
   const out = {}
   const reg = /([^\r\n:]+):(?: ([^\r\n]*))?/g
 
   for (;;) {
-    const match = reg.exec(head)
+    const match = reg.exec(headers)
     if (!match) break
     const key = match[1].toLowerCase()
     out[key] = headAdd(out[key], key, match[2] || '')

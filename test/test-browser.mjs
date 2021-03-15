@@ -29,11 +29,11 @@ class XMLHttpRequest {
     this.internal = {
       req: {
         open: undefined,
-        head: {},
+        headers: {},
         body: undefined,
       },
       res: {
-        head: '',
+        headers: '',
       },
       delayed: undefined,
     }
@@ -68,13 +68,13 @@ class XMLHttpRequest {
     f.validate(key, f.isString)
     f.validate(val, f.isString)
 
-    const head = this.internal.req.head
+    const headers = this.internal.req.headers
     key = key.toLowerCase()
-    head[key] = head[key] ? `${head[key]}, ${val}` : val
+    headers[key] = headers[key] ? `${headers[key]}, ${val}` : val
   }
 
   getAllResponseHeaders() {
-    return this.internal.res.head
+    return this.internal.res.headers
   }
 
   addEventListener() {throw Error(`unsupported`)}
@@ -93,12 +93,12 @@ class XMLHttpRequest {
   }
 
   getMockReqOpen() {return this.internal.req.open}
-  getMockReqHead() {return this.internal.req.head}
+  getMockReqHead() {return this.internal.req.headers}
   getMockReqBody() {return this.internal.req.body}
 
-  setMockRes({status = 0, statusText = '', responseText = '', head = ''}) {
+  setMockRes({status = 0, statusText = '', responseText = '', headers = ''}) {
     Object.assign(this, {status, statusText, responseText})
-    this.internal.res.head = head
+    this.internal.res.headers = headers
   }
 
   mockDelay(fun) {
@@ -126,7 +126,7 @@ export const wait = t.runWithTimeout(async function testBrowser() {
       query: {qKeyOne: 'qValOne', qKeyTwo: ['qValTwoOne', 'qValTwoTwo']},
       username: 'user',
       password: 'pass',
-      head: {hKeyOne: 'hValOne', hKeyTwo: ['hValTwoOne', 'hValTwoTwo']},
+      headers: {hKeyOne: 'hValOne', hKeyTwo: ['hValTwoOne', 'hValTwoTwo']},
       body: 'bodyText',
     }
 
@@ -140,7 +140,7 @@ export const wait = t.runWithTimeout(async function testBrowser() {
       status: 200,
       statusText: 'ok',
       responseText: 'resText',
-      head: `
+      headers: `
 Connection: keep-alive
 Content-Type: text/plain
       `,
@@ -172,7 +172,7 @@ Content-Type: text/plain
       complete: true,
       status: 200,
       statusText: 'ok',
-      head: {
+      headers: {
         'connection': 'keep-alive',
         'content-type': 'text/plain',
       },
@@ -197,7 +197,7 @@ Content-Type: text/plain
       complete: false,
       status: 0,
       statusText: '',
-      head: {},
+      headers: {},
       body: '',
       params,
     })
@@ -218,7 +218,7 @@ Content-Type: text/plain
         complete: true,
         status: 200,
         statusText: 'ok',
-        head: {},
+        headers: {},
         body: 'found',
         params,
       })
@@ -241,7 +241,7 @@ Content-Type: text/plain
         complete: false,
         status: 0,
         statusText: '',
-        head: {},
+        headers: {},
         body: '',
         params,
       })
@@ -264,7 +264,7 @@ Content-Type: text/plain
         complete: true,
         status: 200,
         statusText: 'ok',
-        head: {},
+        headers: {},
         body: 'found',
         params,
       })
@@ -286,7 +286,7 @@ Content-Type: text/plain
         complete: true,
         status: 404,
         statusText: 'not found',
-        head: {},
+        headers: {},
         body: 'not found',
         params,
       })
@@ -297,7 +297,7 @@ Content-Type: text/plain
     const params = {url: '/'}
     const req = h.req(params)
 
-    req.setMockRes({head: `
+    req.setMockRes({headers: `
 One: two
   three: four
   three: five, six
@@ -306,8 +306,8 @@ Eight
     `})
 
 
-    const {head} = await h.wait(req)
+    const {headers} = await h.wait(req)
 
-    t.eq(head, {one: 'two', '  three': ['four', 'five, six'], seven: ''})
+    t.eq(headers, {one: 'two', '  three': ['four', 'five, six'], seven: ''})
   }()
 })

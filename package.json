@@ -1,13 +1,13 @@
 {
   "name": "xhttp",
-  "version": "0.13.1",
+  "version": "0.13.2",
   "type": "module",
   "main": "./node.mjs",
   "browser": "./xhttp.mjs",
   "scripts": {
     "test": "node ./test/test.mjs",
     "lint": "node ./node_modules/.bin/eslint *.mjs **/*.mjs",
-    "prepublishOnly": "NODE_ENV=production npm -s test && npm -s run lint"
+    "prepublishOnly": "NODE_ENV=production npm test && npm run lint"
   },
   "devDependencies": {
     "emerge": "0.5.0",
