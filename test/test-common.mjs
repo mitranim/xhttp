@@ -7,6 +7,7 @@ export function testCommon(h) {
     t.eq(h.urlBase(testUrl), 'one://two.three/four/five')
     t.eq(h.urlSearch(testUrl), 'six=seven&eight=nine')
     t.eq(h.urlHash(testUrl), 'ten?eleven#twelve')
+
     t.eq(h.urlJoin('one://two.three/four/five', 'six=seven&eight=nine', 'ten?eleven#twelve'), testUrl)
     t.eq(h.urlJoin('one', '', ''), 'one')
     t.eq(h.urlJoin('one', 'two', ''), 'one?two')
@@ -15,6 +16,8 @@ export function testCommon(h) {
     t.eq(h.urlJoin('', 'two', ''), '?two')
     t.eq(h.urlJoin('', 'two', 'three'), '?two#three')
     t.eq(h.urlJoin('', '', 'three'), '#three')
+
+    t.eq(h.queryFormat({date: new Date('0001-02-03T04:05:06Z')}), `date=0001-02-03T04:05:06.000Z`)
   }()
 
   void function testParamsToJson() {

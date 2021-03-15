@@ -249,6 +249,15 @@ Many utility functions are exported but undocumented. Peruse the source, looking
 
 ## Changelog
 
+### 0.13.1
+
+Query formatting improvements:
+
+* Machine-readable date encoding via `Date.prototype.toISOString`, producing strings like `0001-02-03T04:05:06.000Z`.
+* Reject non-string query keys.
+* Nil query values are encoded as `''`.
+* Other non-primitive query values are rejected with an exception.
+
 ### 0.13.0
 
 Breaking:

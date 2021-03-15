@@ -192,6 +192,18 @@ function isFunction(val) {
   return typeof val === 'function'
 }
 
+function isDate(val) {
+  return isInstance(val, Date)
+}
+
+function isComplex(val) {
+  return isObject(val) || isFunction(val)
+}
+
+function isPrimitive(val) {
+  return !isComplex(val)
+}
+
 function validate(val, test) {
   if (!test(val)) throw Error(`expected ${show(val)} to satisfy test ${show(test)}`)
 }
@@ -252,6 +264,7 @@ function sendHeader(req, key, val) {
 }
 
 function queryFormatPair(key, val) {
+  validate(key, isString)
   if (!key) return ''
 
   if (isArray(val)) {
@@ -260,8 +273,14 @@ function queryFormatPair(key, val) {
     return out
   }
 
-  validate(val, isString)
-  return `${key}=${val}`
+  return `${key}=${queryFormatVal(val)}`
+}
+
+function queryFormatVal(val) {
+  if (val == null) return ''
+  if (isDate(val)) return val.toISOString()
+  validate(val, isPrimitive)
+  return `${val}`
 }
 
 function urlWithoutHash(url) {
