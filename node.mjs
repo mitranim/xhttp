@@ -5,7 +5,7 @@ import * as http from 'http'
 import * as https from 'https'
 
 export function req(params) {
-  validate(params, isParams)
+  valid(params, isParams)
 
   const {url, query, body, ...rest} = params
   const request = isUrlHttps(url) ? https.request : http.request
@@ -20,7 +20,7 @@ export function req(params) {
 }
 
 export function wait(req) {
-  validate(req, isReq)
+  valid(req, isReq)
 
   return new Promise(function initWait(done, fail) {
     req.once('response', function onNodeRes(val) {
@@ -51,27 +51,28 @@ export function resNormal(res) {
 }
 
 export function resOnlyComplete(res) {
-  validate(res, isRes)
+  valid(res, isRes)
   if (!res.complete) throw new ResErr(res)
   return res
 }
 
 export function resOnlyOk(res) {
-  validate(res, isRes)
+  valid(res, isRes)
   if (!res.ok) throw new ResErr(res)
   return res
 }
 
 // Node-only API. Converts the response body from a stream to either `Buffer` or
-// a string, depending on the stream's contents. (In practice, the output is a
-// `Buffer`.)
+// a string, depending on the stream's contents.
+//
+// The non-stream body comes from our own fake responses such as `timeoutRes`.
 export async function resToComplete(res) {
-  validate(res, isRes)
+  valid(res, isRes)
 
   const {body, ...rest} = res
-  if (body == null) return res
+  if (body == null || isStr(body) || Buffer.isBuffer(body)) return res
 
-  validate(body, isReadableStream)
+  valid(body, isReadableStream)
   return {...rest, complete: true, body: await bufferStream(body)}
 }
 
@@ -81,78 +82,39 @@ export async function resToString(res) {
 }
 
 export function resFromJson(res) {
-  validate(res, isRes)
+  valid(res, isRes)
   const {body, ...rest} = res
   return {...rest, bodyText: body, body: maybeJsonParse(body)}
 }
 
 export function paramsToJson(params) {
-  validate(params, isParams)
+  valid(params, isParams)
   const {headers, body, ...rest} = params
   return {
     ...rest,
-    headers: {...onlyDict(headers), 'content-type': 'application/json'},
+    headers: {...dict(headers), 'content-type': 'application/json'},
     body: JSON.stringify(body),
   }
 }
 
 export function urlWithQuery(url, query) {
-  validate(url, isString)
-  const search = queryFormat(query)
-  return !search
-    ? url
-    : urlJoin(urlBase(url), searchJoin(urlSearch(url), search), urlHash(url))
-}
-
-export function queryFormat(query) {
-  query = onlyDict(query)
-  let out = ''
-  for (const key in query) {
-    out = searchJoin(out, queryFormatPair(key, query[key]))
-  }
-  return out
-}
-
-function searchJoin(left, right) {
-  return left && right ? `${left}&${right}` : left || right
-}
-
-export function urlJoin(base, search, hash) {
-  search = onlyString(search)
-  hash = onlyString(hash)
-  return `${onlyString(base)}${search && `?${search}`}${hash && `#${hash}`}`
-}
-
-export function urlBase(url) {
-  url = urlWithoutHash(onlyString(url))
-  const ind = url.indexOf('?')
-  return ind >= 0 ? url.slice(0, ind) : url
-}
-
-export function urlSearch(url) {
-  url = urlWithoutHash(onlyString(url))
-  const ind = url.indexOf('?')
-  return ind >= 0 ? url.slice(ind + 1) : ''
-}
-
-export function urlHash(url) {
-  url = onlyString(url)
-  const ind = url.indexOf('#')
-  return ind >= 0 ? url.slice(ind + 1) : ''
+  url = new URL(url)
+  searchAssign(url.searchParams, query)
+  return url
 }
 
 export function isStatusOk(status) {
-  return isNumber(status) && status >= 200 && status <= 299
+  return isNum(status) && status >= 200 && status <= 299
 }
 
 export class ResErr extends Error {
   constructor(res) {
-    validate(res, isRes)
+    valid(res, isRes)
 
     const {status, statusText, body} = res
     const stat = status || statusText
 
-    super(`HTTP error${stat ? ` ${stat}` : ``}${isString(body) ? `: ${preview(body)}` : ``}`)
+    super(`HTTP error${stat ? ` ${stat}` : ``}${isStr(body) ? `: ${preview(body) || 'unknown'}` : ``}`)
 
     this.status = status
     this.statusText = statusText
@@ -162,137 +124,68 @@ export class ResErr extends Error {
 
 /* Internal Utils */
 
-function isReq(val) {
-  return isInstance(val, http.ClientRequest)
-}
-
-function isRes(val) {
-  return isDict(val) && isString(val.type) && isBoolean(val.ok) && isNumber(val.status)
-}
-
-function isParams(val) {
-  return isDict(val) && isString(val.url)
-}
-
-function isInstance(val, Cls) {
-  return isObject(val) && val instanceof Cls
-}
-
-function isString(val) {
-  return typeof val === 'string'
-}
-
-function isBoolean(val) {
-  return typeof val === 'boolean'
-}
-
-function isNumber(val) {
-  return typeof val === 'number'
-}
-
-function isObject(val) {
-  return val !== null && typeof val === 'object'
-}
+function isReq(val)       {return isInst(val, http.ClientRequest)}
+function isRes(val)       {return isDict(val) && isStr(val.type) && isBool(val.ok) && isNum(val.status)}
+function isParams(val)    {return isDict(val) && isUrl(val.url)}
+function isNil(val)       {return val == null}
+function isStr(val)       {return typeof val === 'string'}
+function isBool(val)      {return typeof val === 'boolean'}
+function isNum(val)       {return typeof val === 'number'}
+function isObj(val)       {return val !== null && typeof val === 'object'}
+function isArr(val)       {return isInst(val, Array)}
+function isFun(val)       {return typeof val === 'function'}
+function isDate(val)      {return isInst(val, Date)}
+function isComp(val)      {return isObj(val) || isFun(val)}
+function isPrim(val)      {return !isComp(val)}
+function isUrl(val)       {return isStr(val) || isInst(val, URL)}
+function isInst(val, Cls) {return isObj(val) && val instanceof Cls}
 
 function isDict(val) {
-  if (!isObject(val)) return false
+  if (!isObj(val)) return false
   const proto = Object.getPrototypeOf(val)
   return proto === null || proto === Object.prototype
 }
 
-function isArray(val) {
-  return isInstance(val, Array)
-}
+function dict(val)       {return isNil(val) ? {} : only(val, isDict)}
+function only(val, test) {valid(val, test); return val}
 
-function isFunction(val) {
-  return typeof val === 'function'
-}
-
-function isDate(val) {
-  return isInstance(val, Date)
-}
-
-function isComplex(val) {
-  return isObject(val) || isFunction(val)
-}
-
-function isPrimitive(val) {
-  return !isComplex(val)
-}
-
-function validate(val, test) {
+function valid(val, test) {
   if (!test(val)) throw Error(`expected ${show(val)} to satisfy test ${show(test)}`)
 }
 
 function show(val) {
-  if (isFunction(val) && val.name) return val.name
-  if (isArray(val) || isDict(val) || isString(val)) return JSON.stringify(val)
-  return `${val}`
-}
-
-function onlyDict(val) {
-  if (val == null) return {}
-  validate(val, isDict)
-  return val
-}
-
-function onlyString(val) {
-  if (val == null) return ''
-  validate(val, isString)
-  return val
-}
-
-function queryFormatPair(key, val) {
-  validate(key, isString)
-  if (!key) return ''
-
-  if (isArray(val)) {
-    let out = ''
-    for (const elem of val) out = searchJoin(out, queryFormatPair(key, elem))
-    return out
-  }
-
-  return `${key}=${queryFormatVal(val)}`
-}
-
-function queryFormatVal(val) {
-  if (val == null) return ''
-  if (isDate(val)) return val.toISOString()
-  validate(val, isPrimitive)
-  return `${val}`
-}
-
-function urlWithoutHash(url) {
-  const ind = url.indexOf('#')
-  return ind >= 0 ? url.slice(0, ind) : url
+  if (isFun(val) && val.name) return val.name
+  if (isArr(val) || isDict(val) || isStr(val)) return JSON.stringify(val)
+  return String(val)
 }
 
 function maybeJsonParse(val) {
-  return isString(val) ? (val ? JSON.parse(val) : null) : val
+  return isStr(val) ? (val ? JSON.parse(val) : null) : val
 }
 
 function preview(str) {
-  validate(str, isString)
+  valid(str, isStr)
   const limit = 128
   return str.length > limit ? `${str.slice(0, limit)} ...` : str
 }
 
 function isUrlHttps(url) {
-  return url.startsWith('https://')
+  if (isStr(url)) return url.startsWith('https://')
+  return url.protocol === 'https:'
 }
 
 function normalizeParams({username, password, headers, ...rest}) {
   return {
     auth: maybeAuth(username, password),
-    headers: onlyDict(headers),
+    headers: dict(headers),
     ...rest,
   }
 }
 
 function maybeAuth(user, pass) {
   if (user || pass) {
-    validate(user, isString)
-    validate(pass, isString)
+    valid(user, isStr)
+    valid(pass, isStr)
     return `${user}:${pass}`
   }
   return undefined
@@ -307,7 +200,7 @@ function streamRes(req, nodeRes) {
     complete: false,
     status,
     statusText,
-    headers: onlyDict(headers),
+    headers: dict(headers),
     body: nodeRes,
     params: req.params,
   }
@@ -322,7 +215,7 @@ function timeoutRes(req) {
     status: 408,
     statusText: 'request timeout',
     headers: {},
-    body: '',
+    body: 'request timeout',
     params: req.params,
   }
 }
@@ -336,7 +229,7 @@ function clientAbortRes(req) {
     status: 0,
     statusText: 'aborted by client',
     headers: {},
-    body: '',
+    body: 'request aborted by client',
     params: req.params,
   }
 }
@@ -346,6 +239,7 @@ function remoteAbortRes(req) {
     ...clientAbortRes(req),
     type: 'aborted',
     statusText: 'aborted by remote',
+    body: 'request aborted by remote',
   }
 }
 
@@ -353,7 +247,7 @@ function remoteAbortRes(req) {
 // bulk. Caution: the resulting value can be either `Buffer` or a string,
 // depending on the stream contents.
 export function bufferStream(stream) {
-  validate(stream, isReadableStream)
+  valid(stream, isReadableStream)
   const chunks = []
 
   return new Promise(function initStreamToBuffer(done, fail) {
@@ -390,7 +284,7 @@ export function bufferStream(stream) {
 }
 
 function concatChunks(chunks) {
-  if (chunks.every(isString)) return chunks.join('')
+  if (chunks.every(isStr)) return chunks.join('')
   if (chunks.every(Buffer.isBuffer)) return Buffer.concat(chunks)
   return Buffer.concat(chunks.map(toBuffer))
 }
@@ -400,22 +294,42 @@ function toBuffer(val) {
 }
 
 function deinitStream(val) {
-  if (!isObject(val)) return
-  if (isFunction(val.destroy)) val.destroy()
-  else if (isFunction(val.end)) val.end()
+  if (!isObj(val)) return
+  if (isFun(val.destroy)) val.destroy()
+  else if (isFun(val.end)) val.end()
 }
 
 function isReadableStream(val) {
-  return isStream(val) && isFunction(val.read)
+  return isStream(val) && isFun(val.read)
 }
 
 function isStream(val) {
-  return isEmitter(val) && isFunction(val.pipe)
+  return isEmitter(val) && isFun(val.pipe)
 }
 
 function isEmitter(val) {
-  return isObject(val) &&
-    isFunction(val.on) &&
-    isFunction(val.once) &&
-    isFunction(val.removeListener)
+  return isObj(val) &&
+    isFun(val.on) &&
+    isFun(val.once) &&
+    isFun(val.removeListener)
+}
+
+function searchAssign(search, query) {
+  query = dict(query)
+  for (const key in query) searchAppend(search, key, query[key])
+}
+
+function searchAppend(search, key, val) {
+  if (isArr(val)) for (const elem of val) searchAppendOne(search, key, elem)
+  else searchAppendOne(search, key, val)
+}
+
+function searchAppendOne(search, key, val) {
+  if (isNil(val)) return
+  if (isDate(val)) {
+    search.append(key, val.toISOString())
+    return
+  }
+  valid(val, isPrim)
+  search.append(key, val)
 }

@@ -2,7 +2,7 @@
 // See implementation notes in `impl.md`.
 
 export function req(params) {
-  validate(params, isParams)
+  valid(params, isParams)
   const req = new XMLHttpRequest()
   start(req, params)
   return req
@@ -10,129 +10,95 @@ export function req(params) {
 
 // Browser-only API. In Node this is embedded in `req()`.
 export function start(req, params) {
-  validate(req, isReq)
-  validate(params, isParams)
+  valid(req, isReq)
+  valid(params, isParams)
 
   const {method, url, query, username, password, timeout, headers, body} = params
-  if (method) validate(method, isString)
+  if (method) valid(method, isStr)
 
   req.params = params
 
-  // For symmetry with Node.
+  // For consistency with Node.
   if (timeout) req.timeout = timeout
 
-  req.open(method || 'get', urlWithQuery(url, query), true, username, password)
+  req.open(method || 'GET', urlWithQuery(url, query), true, username, password)
   sendHead(req, headers)
   req.send(body)
 }
 
 export function wait(req) {
-  validate(req, isReq)
+  valid(req, isReq)
   return new Promise(function initWait(done) {
     req.onload = req.onabort = req.onerror = req.ontimeout = done
   }).then(eventToRes)
 }
 
 // In Node, this also uses `resToString` which is skippable in the browser.
+// Async for consistency with Node.
 export function resNormal(res) {
-  return resOnlyOk(res)
+  return Promise.resolve(resOnlyOk(res))
 }
 
 export function resOnlyComplete(res) {
-  validate(res, isRes)
+  valid(res, isRes)
   if (!res.complete) throw new ResErr(res)
   return res
 }
 
 export function resOnlyOk(res) {
-  validate(res, isRes)
+  valid(res, isRes)
   if (!res.ok) throw new ResErr(res)
   return res
 }
 
-// In Node, this buffers the response body. In browser, this is a noop.
+// In Node, this buffers the response body.
+// In browser, this is a noop.
+// Async for consistency with Node.
 export const resToComplete = resToString
 
-// In Node, this buffers the response body. In browser, this is a noop.
+// In Node, this buffers the response body.
+// In browser, this is a noop.
+// Async for consistency with Node.
 export function resToString(res) {
-  validate(res, isRes)
+  valid(res, isRes)
   const {body, ...rest} = res
-  return {...rest, body: onlyString(body)}
+  return Promise.resolve({...rest, body: str(body)})
 }
 
 export function resFromJson(res) {
-  validate(res, isRes)
+  valid(res, isRes)
   const {body, ...rest} = res
   return {...rest, bodyText: body, body: maybeJsonParse(body)}
 }
 
 export function paramsToJson(params) {
-  validate(params, isParams)
+  valid(params, isParams)
   const {headers, body, ...rest} = params
   return {
     ...rest,
-    headers: {...onlyDict(headers), 'content-type': 'application/json'},
+    headers: {...dict(headers), 'content-type': 'application/json'},
     body: JSON.stringify(body),
   }
 }
 
 export function urlWithQuery(url, query) {
-  validate(url, isString)
-  const search = queryFormat(query)
-  return !search
-    ? url
-    : urlJoin(urlBase(url), searchJoin(urlSearch(url), search), urlHash(url))
-}
-
-export function queryFormat(query) {
-  query = onlyDict(query)
-  let out = ''
-  for (const key in query) {
-    out = searchJoin(out, queryFormatPair(key, query[key]))
-  }
-  return out
-}
-
-function searchJoin(left, right) {
-  return left && right ? `${left}&${right}` : left || right
-}
-
-export function urlJoin(base, search, hash) {
-  search = onlyString(search)
-  hash = onlyString(hash)
-  return `${onlyString(base)}${search && `?${search}`}${hash && `#${hash}`}`
-}
-
-export function urlBase(url) {
-  url = urlWithoutHash(onlyString(url))
-  const ind = url.indexOf('?')
-  return ind >= 0 ? url.slice(0, ind) : url
-}
-
-export function urlSearch(url) {
-  url = urlWithoutHash(onlyString(url))
-  const ind = url.indexOf('?')
-  return ind >= 0 ? url.slice(ind + 1) : ''
-}
-
-export function urlHash(url) {
-  url = onlyString(url)
-  const ind = url.indexOf('#')
-  return ind >= 0 ? url.slice(ind + 1) : ''
+  url = new URL(url, location.origin)
+  searchAssign(url.searchParams, query)
+  return url
 }
 
 export function isStatusOk(status) {
-  return isNumber(status) && status >= 200 && status <= 299
+  return isNum(status) && status >= 200 && status <= 299
 }
 
 export class ResErr extends Error {
   constructor(res) {
-    validate(res, isRes)
+    valid(res, isRes)
 
     const {status, statusText, body} = res
     const stat = status || statusText
 
-    super(`HTTP error${stat ? ` ${stat}` : ``}${isString(body) ? `: ${preview(body)}` : ``}`)
+    super(`HTTP error${stat ? ` ${stat}` : ``}${isStr(body) ? `: ${preview(body) || 'unknown'}` : ``}`)
 
     this.status = status
     this.statusText = statusText
@@ -142,92 +108,45 @@ export class ResErr extends Error {
 
 /* Internal Utils */
 
-function isReq(val) {
-  return isInstance(val, XMLHttpRequest)
-}
-
-function isRes(val) {
-  return isDict(val) && isString(val.type) && isBoolean(val.ok) && isNumber(val.status)
-}
-
-function isParams(val) {
-  return isDict(val) && isString(val.url)
-}
-
-function isEvent(val) {
-  return isObject(val) && isString(val.type) && isObject(val.target)
-}
-
-function isInstance(val, Cls) {
-  return isObject(val) && val instanceof Cls
-}
-
-function isString(val) {
-  return typeof val === 'string'
-}
-
-function isBoolean(val) {
-  return typeof val === 'boolean'
-}
-
-function isNumber(val) {
-  return typeof val === 'number'
-}
-
-function isObject(val) {
-  return val !== null && typeof val === 'object'
-}
+function isReq(val)       {return isInst(val, XMLHttpRequest)}
+function isRes(val)       {return isDict(val) && isStr(val.type) && isBool(val.ok) && isNum(val.status)}
+function isParams(val)    {return isDict(val) && isUrl(val.url)}
+function isEvent(val)     {return isObj(val) && isStr(val.type) && isObj(val.target)}
+function isNil(val)       {return val == null}
+function isStr(val)       {return typeof val === 'string'}
+function isBool(val)      {return typeof val === 'boolean'}
+function isNum(val)       {return typeof val === 'number'}
+function isObj(val)       {return val !== null && typeof val === 'object'}
+function isArr(val)       {return isInst(val, Array)}
+function isFun(val)       {return typeof val === 'function'}
+function isDate(val)      {return isInst(val, Date)}
+function isComp(val)      {return isObj(val) || isFun(val)}
+function isPrim(val)      {return !isComp(val)}
+function isUrl(val)       {return isStr(val) || isInst(val, URL)}
+function isInst(val, Cls) {return isObj(val) && val instanceof Cls}
 
 function isDict(val) {
-  if (!isObject(val)) return false
+  if (!isObj(val)) return false
   const proto = Object.getPrototypeOf(val)
   return proto === null || proto === Object.prototype
 }
 
-function isArray(val) {
-  return isInstance(val, Array)
-}
+function str(val)        {return isNil(val) ? '' : only(val, isStr)}
+function dict(val)       {return isNil(val) ? {} : only(val, isDict)}
+function only(val, test) {valid(val, test); return val}
 
-function isFunction(val) {
-  return typeof val === 'function'
-}
-
-function isDate(val) {
-  return isInstance(val, Date)
-}
-
-function isComplex(val) {
-  return isObject(val) || isFunction(val)
-}
-
-function isPrimitive(val) {
-  return !isComplex(val)
-}
-
-function validate(val, test) {
+function valid(val, test) {
   if (!test(val)) throw Error(`expected ${show(val)} to satisfy test ${show(test)}`)
 }
 
 function show(val) {
-  if (isFunction(val) && val.name) return val.name
-  if (isArray(val) || isDict(val) || isString(val)) return JSON.stringify(val)
-  return `${val}`
-}
-
-function onlyDict(val) {
-  if (val == null) return {}
-  validate(val, isDict)
-  return val
-}
-
-function onlyString(val) {
-  if (val == null) return ''
-  validate(val, isString)
-  return val
+  if (isFun(val) && val.name) return val.name
+  if (isArr(val) || isDict(val) || isStr(val)) return JSON.stringify(val)
+  return String(val)
 }
 
 function eventToRes(event) {
-  validate(event, isEvent)
+  valid(event, isEvent)
 
   const {target: req, type} = event
   const {status, statusText, readyState} = req
@@ -247,49 +166,24 @@ function eventToRes(event) {
 }
 
 function sendHead(req, headers) {
-  headers = onlyDict(headers)
+  headers = dict(headers)
   for (const key in headers) sendHeader(req, key, headers[key])
 }
 
 function sendHeader(req, key, val) {
   if (val == null) return
 
-  if (isArray(val)) {
+  if (isArr(val)) {
     for (const elem of val) sendHeader(req, key, elem)
     return
   }
 
-  validate(val, isString)
+  valid(val, isStr)
   req.setRequestHeader(key, val)
 }
 
-function queryFormatPair(key, val) {
-  validate(key, isString)
-  if (!key) return ''
-
-  if (isArray(val)) {
-    let out = ''
-    for (const elem of val) out = searchJoin(out, queryFormatPair(key, elem))
-    return out
-  }
-
-  return `${key}=${queryFormatVal(val)}`
-}
-
-function queryFormatVal(val) {
-  if (val == null) return ''
-  if (isDate(val)) return val.toISOString()
-  validate(val, isPrimitive)
-  return `${val}`
-}
-
-function urlWithoutHash(url) {
-  const ind = url.indexOf('#')
-  return ind >= 0 ? url.slice(0, ind) : url
-}
-
 function headParse(headers) {
-  validate(headers, isString)
+  valid(headers, isStr)
 
   const out = {}
   const reg = /([^\r\n:]+):(?: ([^\r\n]*))?/g
@@ -306,17 +200,37 @@ function headParse(headers) {
 
 function headAdd(prev, key, val) {
   if (prev == null) return val
-  if (isString(prev)) return [prev, val]
+  if (isStr(prev)) return [prev, val]
   prev.push(val)
   return prev
 }
 
 function maybeJsonParse(val) {
-  return isString(val) ? (val ? JSON.parse(val) : null) : val
+  return isStr(val) ? (val ? JSON.parse(val) : null) : val
 }
 
 function preview(str) {
-  validate(str, isString)
+  valid(str, isStr)
   const limit = 128
   return str.length > limit ? `${str.slice(0, limit)} ...` : str
+}
+
+function searchAssign(search, query) {
+  query = dict(query)
+  for (const key in query) searchAppend(search, key, query[key])
+}
+
+function searchAppend(search, key, val) {
+  if (isArr(val)) for (const elem of val) searchAppendOne(search, key, elem)
+  else searchAppendOne(search, key, val)
+}
+
+function searchAppendOne(search, key, val) {
+  if (isNil(val)) return
+  if (isDate(val)) {
+    search.append(key, val.toISOString())
+    return
+  }
+  valid(val, isPrim)
+  search.append(key, val)
 }

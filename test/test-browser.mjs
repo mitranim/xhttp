@@ -42,7 +42,7 @@ class XMLHttpRequest {
   open(method, url, async, username, password) {
     t.eq(this.readyState, this.UNSENT, `Unexpected .open() call in state ${this.readyState}`)
 
-    this.internal.req.open = {method, url, async, username, password}
+    this.internal.req.open = {method, url: url.toString(), async, username, password}
 
     this.readyState = this.OPENED
     this.dispatchEvent({type: 'readystatechange', target: this})
@@ -109,6 +109,9 @@ class XMLHttpRequest {
 
 global.XMLHttpRequest = XMLHttpRequest
 
+// Used by `urlWithQuery`.
+if (!global.location) global.location = {origin: 'scheme://sub.top'}
+
 function delay(fun) {
   return f.bind(clearTimeout, setTimeout(fun))
 }
@@ -150,7 +153,7 @@ Content-Type: text/plain
 
     t.eq(req.getMockReqOpen(), {
       method: 'post',
-      url: 'one://two.three/four?five&qKeyOne=qValOne&qKeyTwo=qValTwoOne&qKeyTwo=qValTwoTwo#six?seven#eight',
+      url: 'one://two.three/four?five=&qKeyOne=qValOne&qKeyTwo=qValTwoOne&qKeyTwo=qValTwoTwo#six?seven#eight',
       async: true,
       username: 'user',
       password: 'pass',

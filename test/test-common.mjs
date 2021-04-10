@@ -1,23 +1,23 @@
+/* eslint-disable max-len */
+
 import * as t from './utils.mjs'
 
 export function testCommon(h) {
   void function testUrl() {
     const testUrl = 'one://two.three/four/five?six=seven&eight=nine#ten?eleven#twelve'
 
-    t.eq(h.urlBase(testUrl), 'one://two.three/four/five')
-    t.eq(h.urlSearch(testUrl), 'six=seven&eight=nine')
-    t.eq(h.urlHash(testUrl), 'ten?eleven#twelve')
+    t.is(h.urlWithQuery(testUrl, undefined) instanceof URL, true)
+    t.is(h.urlWithQuery(testUrl, undefined).toString(),     testUrl)
+    t.is(h.urlWithQuery(testUrl, null).toString(),          testUrl)
+    t.is(h.urlWithQuery(testUrl, {}).toString(),            testUrl)
 
-    t.eq(h.urlJoin('one://two.three/four/five', 'six=seven&eight=nine', 'ten?eleven#twelve'), testUrl)
-    t.eq(h.urlJoin('one', '', ''), 'one')
-    t.eq(h.urlJoin('one', 'two', ''), 'one?two')
-    t.eq(h.urlJoin('one', 'two', 'three'), 'one?two#three')
-    t.eq(h.urlJoin('one', '', 'three'), 'one#three')
-    t.eq(h.urlJoin('', 'two', ''), '?two')
-    t.eq(h.urlJoin('', 'two', 'three'), '?two#three')
-    t.eq(h.urlJoin('', '', 'three'), '#three')
-
-    t.eq(h.queryFormat({date: new Date('0001-02-03T04:05:06Z')}), `date=0001-02-03T04:05:06.000Z`)
+    t.is(
+      h.urlWithQuery(testUrl, {
+        six: 'thirteen',
+        eight: ['fourteen', new Date('0001-02-03T04:05:06Z')],
+      }).toString(),
+      'one://two.three/four/five?six=seven&eight=nine&six=thirteen&eight=fourteen&eight=0001-02-03T04%3A05%3A06.000Z#ten?eleven#twelve',
+    )
   }()
 
   void function testParamsToJson() {

@@ -83,7 +83,7 @@ async function runNodeTest() {
     const body = JSON.parse(await h.bufferStream(res.body))
 
     t.eqDicts(body, {
-      path: '/four?five&qKeyOne=qValOne&qKeyTwo=qValTwoOne&qKeyTwo=qValTwoTwo',
+      path: '/four?five=&qKeyOne=qValOne&qKeyTwo=qValTwoOne&qKeyTwo=qValTwoTwo',
       headers: {
         hkeyone: 'hValOne',
         hkeytwo: 'hValTwoOne, hValTwoTwo',
@@ -151,7 +151,7 @@ async function runNodeTest() {
       status: 0,
       statusText: 'aborted by client',
       headers: {},
-      body: '',
+      body: 'request aborted by client',
       params,
     })
   }()
@@ -194,7 +194,7 @@ async function runNodeTest() {
         status: 0,
         statusText: 'aborted by client',
         headers: {},
-        body: '',
+        body: 'request aborted by client',
         params,
       })
     }()

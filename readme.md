@@ -55,6 +55,12 @@ When using native JS modules in a browser without a bundler, import like this:
 import * as h from './node_modules/xhttp/xhttp.mjs'
 ```
 
+Or like this:
+
+```js
+import * as h from 'https://unpkg.com/xhttp@0.14.0/xhttp.mjs'
+```
+
 ## API
 
 ### Types
@@ -70,7 +76,7 @@ In browsers, `body` must be anything accepted by `XMLHttpRequest.prototype.send`
 ```ts
 interface Params {
   method?:   string
-  url:       string
+  url:       string | URL
   query?:    {[string]: any}
   username?: string
   password?: string
@@ -153,7 +159,7 @@ res.body.pipe(process.stdout)
 
 "Normal" request-response: buffers the response body to a string, and ensures that the response has an "ok" status. Otherwise throws a [`ResErr`](#reserr).
 
-Takes and returns a [`Response`](#response), possibly async. Should be used via `.then()`.
+Takes and returns a [`Response`](#response), always async. Should be used via `.then()`.
 
 ```js
 const req = h.req({url: 'https://example.com'})
@@ -167,7 +173,7 @@ console.log(res.body)
 
 Ensures that the response has an "ok" status. Otherwise throws a [`ResErr`](#reserr).
 
-Takes and returns a [`Response`](#response), possibly async. Should be used via `.then()`.
+Takes and returns a [`Response`](#response), always sync. Should be used via `.then()`.
 
 ```js
 // Has a non-"ok" code, but doesn't throw.
@@ -189,7 +195,7 @@ catch (err) {
 
 In Node, collects the response body into a single `Buffer` or string. In browsers, this is a noop, provided only for symmetry; `XMLHttpRequest` automatically buffers the response body into a string.
 
-Takes and returns a [`Response`](#response), possibly async. Should be used via `.then()`.
+Takes and returns a [`Response`](#response), always async. Should be used via `.then()`.
 
 ```js
 const req = h.req({url: 'https://example.com'})
@@ -203,7 +209,7 @@ console.log(res.body)
 
 Similar to [`resToComplete(res)`](#restocompleteres). In Node, this buffers the response body into a string (not a `Buffer`). In browsers, this is a noop, provided for symmetry.
 
-Takes and returns a [`Response`](#response), possibly async. Should be used via `.then()`.
+Takes and returns a [`Response`](#response), always async. Should be used via `.then()`.
 
 ```js
 const req = h.req({url: 'https://example.com'})
@@ -217,7 +223,7 @@ console.log(res.body)
 
 Invokes `JSON.parse` on the response body. The body must have been already downloaded via [`resToComplete(res)`](#restocompleteres) or [`resToString(res)`](#restostringres). Should be used for _receiving_ JSON. For _sending_ JSON, use [`paramsToJson(params)`](#paramstojsonparams).
 
-Takes and returns a [`Response`](#response), possibly async. Should be used via `.then()`.
+Takes and returns a [`Response`](#response), always sync. Must be preceded by body buffering. Should be used via `.then()`.
 
 ```js
 const req = h.req({url: '/api/some-json-endpoint'})
@@ -248,6 +254,22 @@ const req = h.req(h.paramsToJson({
 Many utility functions are exported but undocumented. Peruse the source, looking for `export`.
 
 ## Changelog
+
+### 0.14.0
+
+Minor breaking changes in the name of simplicity and consistency:
+
+* In browsers, the following functions now _always_ return promises, for consistency with Node: `resNormal`, `resToComplete`, `resToString`.
+
+* The undocumented function `urlWithQuery` now always returns a `URL` object, rather than a string. The input `url` may be a string or another `URL` (not mutated).
+
+* Library reduction:
+
+  * Removed undocumented: `queryFormat`, `urlJoin`, `urlBase`, `urlSearch`, `urlHash`.
+
+  * Use the native `URL` and `URLSearchParams` interfaces for URL decoding and encoding. (No change in the documented `Params` API; `url` and `query` work the same as before.)
+
+Reduced the unminified size of both files by ≈1 KiB (browser to 6 KiB, Node to 8 KiB).
 
 ### 0.13.2
 
