@@ -111,10 +111,10 @@ export class ResErr extends Error {
   constructor(res) {
     valid(res, isRes)
 
-    const {status, statusText, body} = res
+    const {status, statusText, type, body} = res
     const stat = status || statusText
-
-    super(`HTTP error${stat ? ` ${stat}` : ``}${isStr(body) ? `: ${preview(body) || 'unknown'}` : ``}`)
+    const msg = (isStr(body) && preview(body)) || type || 'unknown'
+    super(`HTTP error${stat ? ` ${stat}` : ``}: ${msg}`)
 
     this.status = status
     this.statusText = statusText

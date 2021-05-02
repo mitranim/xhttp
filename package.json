@@ -1,6 +1,6 @@
 {
   "name": "xhttp",
-  "version": "0.14.0",
+  "version": "0.14.1",
   "type": "module",
   "main": "./node.mjs",
   "browser": "./xhttp.mjs",
@@ -22,7 +22,7 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git://github.com/Mitranim/xhttp.git"
+    "url": "git://github.com/mitranim/xhttp.git"
   },
   "license": "Unlicense",
   "devDependencies": {

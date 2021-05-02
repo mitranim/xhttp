@@ -255,6 +255,10 @@ Many utility functions are exported but undocumented. Peruse the source, looking
 
 ## Changelog
 
+### 0.14.1
+
+`ResErr` error messages now includes the response type if the response body is missing. Particularly useful for timeout responses.
+
 ### 0.14.0
 
 Minor breaking changes in the name of simplicity and consistency:
