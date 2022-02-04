@@ -1,33 +1,10 @@
 {
   "name": "xhttp",
-  "version": "0.14.1",
+  "version": "0.15.0",
   "type": "module",
-  "main": "./node.mjs",
-  "browser": "./xhttp.mjs",
-  "scripts": {
-    "test": "node ./test/test.mjs",
-    "lint": "node ./node_modules/.bin/eslint *.mjs **/*.mjs",
-    "watch": "watchexec -c -r -d=0 -e mjs 'npm test && npm run lint'",
-    "prepublishOnly": "NODE_ENV=production npm test && npm run lint"
-  },
-  "description": "Lightweight library for making HTTP requests in Node.js and browsers",
-  "keywords": [
-    "http",
-    "request",
-    "node",
-    "browser",
-    "XMLHttpRequest",
-    "ajax",
-    "xhr"
-  ],
-  "repository": {
-    "type": "git",
-    "url": "git://github.com/mitranim/xhttp.git"
-  },
-  "license": "Unlicense",
-  "devDependencies": {
-    "emerge": "0.5.0",
-    "eslint": "7.24.0",
-    "fpx": "0.8.0"
-  }
+  "main": "./xhttp.mjs",
+  "description": "Tiny shortcuts for using the native fetch API. Provides a fluent builder-style API for request building and response reading.",
+  "keywords": ["http", "request", "fetch"],
+  "repository": {"type": "git", "url": "git://github.com/mitranim/xhttp.git"},
+  "license": "Unlicense"
 }

@@ -1,368 +1,229 @@
 ## Overview
 
-Lightweight library for making HTTP requests in browser and Node, with a mostly-isomorphic API.
+Tiny syntactic shortcuts for native `Request`/`Response`/`Headers`/`fetch`.
 
-Small (a few kilobytes) and dependency-free. Usable as a native JS module. Does _NOT_ rely on polyfills.
+* Fluent builder-style API.
+* Interoperable with built-ins.
+* Shortcuts for common actions, such as:
+  * Building HTTP requests.
+    * A builder-style API is more concise and flexible than the native one.
+  * Handling HTTP errors in responses.
+    * Constructing descriptive exceptions with HTTP status and response text.
+* Tiny, dependency-free, single file, native module.
 
 ## TOC
 
-* [Why](#why)
-* [Usage](#usage)
-* [API](#api)
-  * [Types](#types)
-    * [`Params`](#params)
-    * [`Response`](#response)
-    * [`ResErr`](#reserr)
-  * [`req(params)`](#reqparams)
-  * [`wait(req)`](#waitreq)
-  * [`resNormal(res)`](#resnormalres)
-  * [`resOnlyOk(res)`](#resonlyokres)
-  * [`resToComplete(res)`](#restocompleteres)
-  * [`resToString(res)`](#restostringres)
-  * [`resFromJson(res)`](#resfromjsonres)
-  * [`paramsToJson(params)`](#paramstojsonparams)
+* [#Usage](#usage)
+* [#API](#api)
+  * [`class Err`](#class-err)
+  * [`class Req`](#class-req)
+  * [`class Res`](#class-res)
+  * [`class Head`](#class-head)
   * [Undocumented](#undocumented)
-* [Changelog](#changelog)
-
-## Why
-
-* Native APIs are too low-level and error-prone.
-* Other libraries are too bloated.
-* `fetch` is crippled by lack of cancelation and upload/download progress. `xhttp` exposes the underlying `XMLHttpRequest` and `http.ClientRequest` objects to make this available.
+* [#Changelog](#changelog)
+* [#License](#license)
+* [#Misc](#misc)
 
 ## Usage
 
-The API is mostly isomorphic between browsers and Node.
+In browsers and Deno, import by URL:
 
 ```js
-import * as h from 'xhttp'
-
-// Elides cancelation for simplicity of example.
-function fetchString(params) {
-  const req = h.req(params)
-  return h.wait(req).then(h.resNormal)
-}
-
-// Elides cancelation for simplicity of example.
-function fetchJson(params) {
-  return fetchString(h.paramsToJson(params)).then(h.resFromJson)
-}
+import * as h from 'https://cdn.jsdelivr.net/npm/xhttp@0.15.0/xhttp.mjs'
 ```
 
-When using native JS modules in a browser without a bundler, import like this:
+When using Node or NPM-oriented bundlers like Esbuild:
 
-```js
-import * as h from './node_modules/xhttp/xhttp.mjs'
+```sh
+npm i -E xhttp
 ```
 
-Or like this:
+Example usage:
 
 ```js
-import * as h from 'https://unpkg.com/xhttp@0.14.0/xhttp.mjs'
+const input = {msg: `hello world`}
+const data = await new h.Req().to(`/api/blah`).post().json(input).fetchOkJson()
 ```
 
 ## API
 
-### Types
+### `class Err`
 
-#### `Params`
-
-Input to [`req(params)`](#reqparams).
-
-If `query` is provided, it's automatically encoded into the URL.
-
-In browsers, `body` must be anything accepted by `XMLHttpRequest.prototype.send`, which includes strings and `FormData` objects. In Node, `body` must be either a readable stream, a string, or a `Buffer`.
+Subclass of `Error` for HTTP responses. The error message includes the HTTP status code, if any.
 
 ```ts
-interface Params {
-  method?:   string
-  url:       string | URL
-  query?:    {[string]: any}
-  username?: string
-  password?: string
-  timeout?:  number
-  headers?:  {[string]: string}
-  body?:     string | Buffer | ReadableStream | FormData
+class Err extends Error {
+  message: string
+  status: int
+  res?: Response
+
+  constructor(message: string, status: int, res?: Response)
 }
-````
+```
 
-#### `Response`
+### `class Req`
 
-Result of a promise returned by [`wait(req)`](#waitreq). Includes the request and original params.
-
-`ok` is true is the HTTP status was between 200 and 299.
-
-`complete` is true if the HTTP request has completed and the response body has been fully downloaded. In Node, [`wait(req)`](#waitreq) resolves to a response where `complete` is false, and requires [`resToComplete(res)`](#restocompleteres) to make it true.
-
-In browsers, `body` is always a string. In Node, `body` is initially a readable stream, which can be buffered via [`resToComplete(res)`](#restocompleteres) into a `Buffer`, or [`resToString(res)`](#restostringres) into a string. Those functions are available in the browser version for symmetry.
+Request builder. Does _not_ subclass `Request`. Call `.req()` to create a native request, or the various `.fetchX()` methods to immediately execute. Unlike the native request, the body is not always a stream. This means `Req` can be stored and reused several times.
 
 ```ts
-interface Response {
-  req:        XMLHttpRequest | http.ClientRequest
-  type:       string
-  ok:         boolean
-  complete:   boolean
-  status:     number
-  statusText: number
-  headers:    {[string]: string}
-  body:       string | Buffer | ReadableStream
-  params:     Params
+class Req extends RequestInit {
+  /*
+  Similar to `fetch(this.req())`, but also constructs `Res` from the resulting
+  response.
+  */
+  fetch(): Promise<Res>
+
+  /*
+  Returns the resulting `Res` if the response is OK. If the response is
+  received, but HTTP status code is non-OK, throws a descriptive `Err`.
+
+  Shortcut for `(await this.fetch()).okRes()`.
+  */
+  fetchOk(): Promise<Res>
+
+  // Shortcut for `(await this.fetch()).okText()`.
+  fetchOkText(): Promise<Res>
+
+  // Shortcut for `(await this.fetch()).okJson()`.
+  fetchOkJson(): Promise<Res>
+
+  /*
+  Mutates the request by applying the given options and returns the same
+  reference. Automatically merges headers.
+  */
+  mut(init: RequestInit): Req
+
+  // Shortcut for `new Request(this.url, this)`.
+  req(): Request
+
+  // Sets `.url` and returns the same reference.
+  to(val: {toString(): string}): Res
+
+  // Sets `.signal` and returns the same reference.
+  sig(val: AbortSignal): Res
+
+  // Sets `.method` and returns the same reference.
+  meth(val: string): Res
+
+  // Sets `.body` and returns the same reference. Short for "input".
+  inp(val: BodyInit): Res
+
+  // JSON-encodes the input, sets `.body`, and sets JSON request headers.
+  // Does NOT set the `accept` header. Returns the same reference.
+  json(val: any): Res
+
+  // Shortcuts for setting the corresponding HTTP method.
+  get(): Res
+  post(): Res
+  put(): Res
+  patch(): Res
+  delete(): Res
+
+  // Idempotently sets `.headers` and returns the resulting reference.
+  head(): Head
+
+  // Shortcuts for modifying the headers. All mutate and return the request.
+  headSet(key, val: string): Res
+  headAppend(key, val: string): Res
+  headDelete(key: string): Res
+  headMut(key: string): Res
+
+  // Overrides the `.head` class.
+  get Head(): {new(): Head}
+
+  // Overrides the response class.
+  get Res(): {new(): Res}
 }
-````
+```
 
-#### `ResErr`
+### `class Res`
 
-Thrown by functions like [`resOnlyOk(res)`](#resonlyokres). These errors are always opt-in.
+Subclass of `Response` with additional shortcuts for response handling. Always wraps a native response received from another source.
 
 ```ts
-class ResErr extends Error {
-  res:        Response
-  status:     number
-  statusText: string
-  message:    string
+class Res extends Response {
+  // Reference to the wrapped response.
+  res: Response
+
+  /*
+  Same as the native constructor, but takes an additional response reference
+  to wrap. Defers the following getters to the original:
+
+    get redirected
+    get type
+    get url
+  */
+  constructor(body?: BodyInit | null, init?: ResponseInit, res: Response)
+
+  /*
+  If `res.ok`, returns the response as-is. Otherwise throws an instance of
+  `Err` with the status code and response text in its error message.
+  */
+  okRes(): Promise<Res>
+
+  /*
+  Shortcut for `(await this.okRes()).text()`. On unsuccessful response,
+  throws a descriptive error. On success, returns response text.
+  */
+  okText(): Promise<string>
+
+  /*
+  Shortcut for `(await this.okRes()).json()`. On unsuccessful response,
+  throws a descriptive error. On success, returns decoded JSON.
+  */
+  okJson(): Promise<any>
+
+  // Shortcut for constructing from another response.
+  static from(res: Response): Res
 }
 ```
 
-### `req(params)`
+### `class Head`
 
-Creates and immediately starts the request with the given [`Params`](#params). You must immediately attach callbacks via [`wait(req)`](#waitreq).
+Subclass of `Headers` with additional shortcuts. Used internally by [`Req`](#class-req).
 
-The request can be used for upload/download progress and cancelation.
+```ts
+class Head extends Headers {
+  /*
+  Merges the headers from the given source into the receiver. Mutates and
+  returns the same reference.
+  */
+  mut(src: Headers | Record<string, string>): Head
 
-```js
-const req = h.req({url: 'https://example.com'})
-req.abort()
-```
+  /*
+  Overrides `Headers.prototype.set` to return the same reference, instead of
+  void. Also asserts input types.
+  */
+  set(key, val: string): Head
 
-### `wait(req)`
+  /*
+  Overrides `Headers.prototype.append` to return the same reference, instead of
+  void. Also asserts input types.
+  */
+  append(key, val: string): Head
 
-Takes a request created by [`req(params)`](#reqparams) and returns a promise that will resolve to a [`Response`](#response).
-
-In Node, in case of networks errors (unreachable host), the promise may fail with an error. Otherwise, it will _always_ resolve to a `Response`, even if the request was aborted, timed out, or the server returned a 400-500 error code.
-
-To filter only "ok" responses, use [`resOnlyOk(res)`](#resonlyokres).
-
-In Node, the response body is a readable stream. For isomorphic behavior, use [`resToString(res)`](#restostringres), available in both environments.
-
-```js
-const req = h.req({url: 'https://example.com'})
-
-const res = await h.wait(req)
-
-console.log(res)
-
-// In Node:
-res.body.pipe(process.stdout)
-```
-
-### `resNormal(res)`
-
-"Normal" request-response: buffers the response body to a string, and ensures that the response has an "ok" status. Otherwise throws a [`ResErr`](#reserr).
-
-Takes and returns a [`Response`](#response), always async. Should be used via `.then()`.
-
-```js
-const req = h.req({url: 'https://example.com'})
-
-const res = await h.wait(req).then(h.resNormal)
-
-console.log(res.body)
-```
-
-### `resOnlyOk(res)`
-
-Ensures that the response has an "ok" status. Otherwise throws a [`ResErr`](#reserr).
-
-Takes and returns a [`Response`](#response), always sync. Should be used via `.then()`.
-
-```js
-// Has a non-"ok" code, but doesn't throw.
-const req = h.req({url: 'https://example.com/404'})
-const res = await h.wait(req)
-console.log(res.status) // 404
-
-// Throws because of `resOnlyOk`.
-try {
-  const req = h.req({url: 'https://example.com/404'})
-  const _ = await h.wait(res).then(h.resOnlyOk)
+  /*
+  Similar to `Set.prototype.clear`. Removes all content. Mutates and returns
+  the same reference.
+  */
+  clear(): Head
 }
-catch (err) {
-  console.log(err) // ResErr
-}
-```
-
-### `resToComplete(res)`
-
-In Node, collects the response body into a single `Buffer` or string. In browsers, this is a noop, provided only for symmetry; `XMLHttpRequest` automatically buffers the response body into a string.
-
-Takes and returns a [`Response`](#response), always async. Should be used via `.then()`.
-
-```js
-const req = h.req({url: 'https://example.com'})
-
-const res = await h.wait(req).then(h.resToComplete)
-
-console.log(res.body)
-```
-
-### `resToString(res)`
-
-Similar to [`resToComplete(res)`](#restocompleteres). In Node, this buffers the response body into a string (not a `Buffer`). In browsers, this is a noop, provided for symmetry.
-
-Takes and returns a [`Response`](#response), always async. Should be used via `.then()`.
-
-```js
-const req = h.req({url: 'https://example.com'})
-
-const res = await h.wait(req).then(h.resToString)
-
-console.log(res.body)
-```
-
-### `resFromJson(res)`
-
-Invokes `JSON.parse` on the response body. The body must have been already downloaded via [`resToComplete(res)`](#restocompleteres) or [`resToString(res)`](#restostringres). Should be used for _receiving_ JSON. For _sending_ JSON, use [`paramsToJson(params)`](#paramstojsonparams).
-
-Takes and returns a [`Response`](#response), always sync. Must be preceded by body buffering. Should be used via `.then()`.
-
-```js
-const req = h.req({url: '/api/some-json-endpoint'})
-
-const res = await h.wait(req)
-  .then(h.resToComplete)
-  .then(h.resFromJson)
-
-console.log(res.body)
-```
-
-### `paramsToJson(params)`
-
-Invokes `JSON.stringify` on the request body, and adds the appropriate `content-type` header. Should be used for _sending_ JSON. For _receiving_ JSON, use [`resFromJson(res)`](#resfromjsonres).
-
-Takes and returns [`Params`](#params).
-
-```js
-const req = h.req(h.paramsToJson({
-  url: '/api/some-json-endpoint',
-  method: 'post',
-  body: {key: 'val'},
-}))
 ```
 
 ### Undocumented
 
-Many utility functions are exported but undocumented. Peruse the source, looking for `export`.
+Some APIs are exported but undocumented to avoid bloating the docs. Check the source files and look for `export`.
 
 ## Changelog
 
-### 0.14.1
+### 0.15.0
 
-`ResErr` error messages now includes the response type if the response body is missing. Particularly useful for timeout responses.
+Full revision.
 
-### 0.14.0
-
-Minor breaking changes in the name of simplicity and consistency:
-
-* In browsers, the following functions now _always_ return promises, for consistency with Node: `resNormal`, `resToComplete`, `resToString`.
-
-* The undocumented function `urlWithQuery` now always returns a `URL` object, rather than a string. The input `url` may be a string or another `URL` (not mutated).
-
-* Library reduction:
-
-  * Removed undocumented: `queryFormat`, `urlJoin`, `urlBase`, `urlSearch`, `urlHash`.
-
-  * Use the native `URL` and `URLSearchParams` interfaces for URL decoding and encoding. (No change in the documented `Params` API; `url` and `query` work the same as before.)
-
-Reduced the unminified size of both files by ≈1 KiB (browser to 6 KiB, Node to 8 KiB).
-
-### 0.13.2
-
-Revert one of the breaking changes in `0.13.0`: headers are once again called `headers`, rather than `head`, for consistency with Node's convention.
-
-### 0.13.1
-
-Query formatting improvements:
-
-* Machine-readable date encoding via `Date.prototype.toISOString`, producing strings like `0001-02-03T04:05:06.000Z`.
-* Reject non-string query keys.
-* Nil query values are encoded as `''`.
-* Other non-primitive query values are rejected with an exception.
-
-### 0.13.0
-
-Breaking:
-
-* The API has been revised, simplified, and made mostly isomorphic between browsers and Node.
-
-* Uses promises to simplify response transformation. Still exposes the underlying request objects, allowing progress tracking and cancelation.
-
-* Provided _only_ as native JS modules. Not compatible with IE or `require`.
-
-Minor improvements:
-
-* Supports lists in queries and headers.
-
-* The Node version is now dependency-free.
-
-### 0.12.0
-
-**Browser**:
-
-Breaking:
-
-* renamed `Xhttp` → `request`
-
-* `request` and `transformParams` no longer treat `body` as query params for read-only requests. Now you explicitly pass `params.query` instead. This works for all HTTP methods, not just GET/HEAD/OPTIONS as before.
-
-* Automatic query encoding no longer omits values with empty strings, but does still omit `null` or `undefined` values.
-
-**Node**:
-
-Params now accept a dict of query parameters that are automatically formdata-encoded and appended to the URL:
-
-```
-xhttp.bufferedRequest({
-  url: 'https://google.com/search',
-  query: {q: 'test'},
-}, (err, response) => {
-  // ...
-})
-```
-
-This makes a request to `https://google.com/search?q=test`.
-
-### 0.11.0
-
-**Node**:
-
-Breaking: removed futures and the Posterus dependency. The API is now callback-based. The user is expected to add promises/futures/observables/etc. by themselves. This makes us more flexible and lightweight.
-
-### 0.10.0
-
-**Node**:
-
-Minor but breaking cleanup.
-
-  * renamed `httpRequest` → `textRequest`
-  * renamed `okErr` → `httpError`
-  * `textRequest` and `jsonRequest` no longer implicitly use `httpError` to throw on non-200+ responses
-  * an aborted response now has `.reason = 'abort'`, not `.reason = 'aborted'` for mental consistency with its counterpart in the browser library
-
-Also updated dependencies.
-
-### 0.8.0 → 0.9.0
-
-**Browser**:
-
-Breaking cleanup. Renamed/replaced most lower-level utils (that nobody ever used) to simplify customization. See the Misc Utils section for the new examples. The main `Xhttp` function works the same way, so most users shouldn't notice a difference.
-
-**Node**:
-
-Breaking: `Response` no longer has a `.stream` property; in a streaming response, the `.body` is a stream.
-
-`bufferBody` and `stringifyBody` now work on anything with a `.body` and don't require the full `Response` structure.
-
-`bufferBody` consistently returns a future.
+* Now provides shortcuts for `fetch` and other built-ins.
+* Now provides only 1 module for all environments.
+* No longer uses Node APIs.
+* No longer uses `XMLHttpRequest`.
 
 ## License
 
