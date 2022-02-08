@@ -31,6 +31,8 @@ export class Err extends Error {
   get name() {return this.constructor.name}
 }
 
+export function req() {return new Req()}
+
 export class Req {
   async fetch() {return this.Res.from(await fetch(this.req()))}
   async fetchOk() {return (await this.fetch()).okRes()}

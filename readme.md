@@ -15,6 +15,7 @@ Tiny syntactic shortcuts for native `Request`/`Response`/`Headers`/`fetch`.
 
 * [#Usage](#usage)
 * [#API](#api)
+  * [`function req`](#function-req)
   * [`class Err`](#class-err)
   * [`class Req`](#class-req)
   * [`class Res`](#class-res)
@@ -29,7 +30,7 @@ Tiny syntactic shortcuts for native `Request`/`Response`/`Headers`/`fetch`.
 In browsers and Deno, import by URL:
 
 ```js
-import * as h from 'https://cdn.jsdelivr.net/npm/xhttp@0.15.0/xhttp.mjs'
+import * as h from 'https://cdn.jsdelivr.net/npm/xhttp@0.15.1/xhttp.mjs'
 ```
 
 When using Node or NPM-oriented bundlers like Esbuild:
@@ -41,11 +42,15 @@ npm i -E xhttp
 Example usage:
 
 ```js
-const input = {msg: `hello world`}
-const data = await new h.Req().to(`/api/blah`).post().json(input).fetchOkJson()
+const reqBody = {msg: `hello world`}
+const resBody = await h.req().to(`/api`).post().json(reqBody).fetchOkJson()
 ```
 
 ## API
+
+### `function req`
+
+Same as [#`new Req`](#class-req) but syntactically shorter.
 
 ### `class Err`
 
@@ -82,10 +87,10 @@ class Req extends RequestInit {
   fetchOk(): Promise<Res>
 
   // Shortcut for `(await this.fetch()).okText()`.
-  fetchOkText(): Promise<Res>
+  fetchOkText(): Promise<string>
 
   // Shortcut for `(await this.fetch()).okJson()`.
-  fetchOkJson(): Promise<Res>
+  fetchOkJson(): Promise<any>
 
   /*
   Mutates the request by applying the given options and returns the same
@@ -97,7 +102,7 @@ class Req extends RequestInit {
   req(): Request
 
   // Sets `.url` and returns the same reference.
-  to(val: {toString(): string}): Res
+  to(val: string | {toString(): string}): Res
 
   // Sets `.signal` and returns the same reference.
   sig(val: AbortSignal): Res
@@ -126,19 +131,19 @@ class Req extends RequestInit {
   headSet(key, val: string): Res
   headAppend(key, val: string): Res
   headDelete(key: string): Res
-  headMut(key: string): Res
+  headMut(src: Headers | Record<string, string>): Res
 
-  // Overrides the `.head` class.
+  // Class used for `.headers`. Can override in subclass.
   get Head(): {new(): Head}
 
-  // Overrides the response class.
-  get Res(): {new(): Res}
+  // Class used for responses. Can override in subclass.
+  get Res(): {new(): Res; static from(res: Response): Res}
 }
 ```
 
 ### `class Res`
 
-Subclass of `Response` with additional shortcuts for response handling. Always wraps a native response received from another source.
+Subclass of `Response` with additional shortcuts for response handling. Always wraps a native response received from another source. [#`Req`](#class-req) automatically uses this for responses. You don't need to construct this.
 
 ```ts
 class Res extends Response {
@@ -215,6 +220,10 @@ class Head extends Headers {
 Some APIs are exported but undocumented to avoid bloating the docs. Check the source files and look for `export`.
 
 ## Changelog
+
+### 0.15.1
+
+Add `req` shortcut.
 
 ### 0.15.0
 
