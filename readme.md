@@ -20,6 +20,8 @@ Tiny syntactic shortcuts for native `Request`/`Response`/`Headers`/`fetch`.
   * [`class Req`](#class-req)
   * [`class Res`](#class-res)
   * [`class Head`](#class-head)
+  * [`function jsonDecode`](#function-jsondecode)
+  * [`function jsonEncode`](#function-jsonencode)
   * [Undocumented](#undocumented)
 * [#Changelog](#changelog)
 * [#License](#license)
@@ -214,6 +216,14 @@ class Head extends Headers {
   clear(): Head
 }
 ```
+
+### `function jsonDecode`
+
+Sanity-checking wrapper for [`JSON.parse`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/JSON/parse). If the input is nil or an empty string, returns `null`. Otherwise the input must be a primitive string. Throws on other inputs, without trying to stringify them.
+
+### `function jsonEncode`
+
+Sanity-checking wrapper for [`JSON.stringify`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/JSON/stringify). Equivalent to `JSON.stringify(val ?? null)`. If the input is `undefined`, returns `'null'` (string) rather than `undefined` (nil). Output is _always_ a valid JSON string.
 
 ### Undocumented
 
