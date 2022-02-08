@@ -32,7 +32,7 @@ Tiny syntactic shortcuts for native `Request`/`Response`/`Headers`/`fetch`.
 In browsers and Deno, import by URL:
 
 ```js
-import * as h from 'https://cdn.jsdelivr.net/npm/xhttp@0.15.1/xhttp.mjs'
+import * as h from 'https://cdn.jsdelivr.net/npm/xhttp@0.15.2/xhttp.mjs'
 ```
 
 When using Node or NPM-oriented bundlers like Esbuild:
@@ -230,6 +230,10 @@ Sanity-checking wrapper for [`JSON.stringify`](https://developer.mozilla.org/en-
 Some APIs are exported but undocumented to avoid bloating the docs. Check the source files and look for `export`.
 
 ## Changelog
+
+### 0.15.2
+
+Bugfix for previous version.
 
 ### 0.15.1
 

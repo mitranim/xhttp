@@ -19,8 +19,8 @@ export function isErrWith(err, code) {
 
 export class Err extends Error {
   constructor(message, status, res) {
-    req(message, isStr)
-    req(status, isNat)
+    valid(message, isStr)
+    valid(status, isNat)
     optInst(res, Response)
 
     super((status ? status + `: ` : ``) + message)
@@ -34,7 +34,7 @@ export class Err extends Error {
 export function req() {return new Req()}
 
 export class Req {
-  async fetch() {return this.Res.from(await fetch(this.req()))}
+  async fetch() {return this.Res.from(await fetch(this.valid()))}
   async fetchOk() {return (await this.fetch()).okRes()}
   async fetchOkText() {return (await this.fetch()).okText()}
   async fetchOkJson() {return (await this.fetch()).okJson()}
@@ -45,7 +45,7 @@ export class Req {
     return this
   }
 
-  req() {return new Request(this.url, this)}
+  valid() {return new Request(this.url, this)}
   to(val) {return this.url = val, this}
   sig(val) {return this.signal = val, this}
   meth(val) {return this.method = str(val) || undefined, this}
@@ -72,7 +72,7 @@ export class Req {
 export class Res extends Response {
   constructor(body, init, res) {
     super(body, init)
-    this.res = reqInst(res, Response)
+    this.res = validInst(res, Response)
   }
 
   get redirected() {return this.res.redirected}
@@ -91,7 +91,7 @@ export class Res extends Response {
   async okJson() {return (await this.okRes()).json()}
 
   static from(res) {
-    reqInst(res, Response)
+    validInst(res, Response)
     return new this(res.body, res, res)
   }
 
@@ -105,15 +105,15 @@ export class Head extends Headers {
   }
 
   set(key, val) {
-    req(key, isStr)
-    req(val, isStr)
+    valid(key, isStr)
+    valid(val, isStr)
     super.set(key, val)
     return this
   }
 
   append(key, val) {
-    req(key, isStr)
-    req(val, isStr)
+    valid(key, isStr)
+    valid(val, isStr)
     super.append(key, val)
     return this
   }
@@ -144,7 +144,7 @@ function isNull(val) {return val === null} // eslint-disable-line eqeqeq
 function isDictProto(val) {return isNull(val) || val === Object.prototype}
 
 function isInst(val, cls) {
-  req(cls, isCls)
+  valid(cls, isCls)
   return isObj(val) && val instanceof cls
 }
 
@@ -157,21 +157,14 @@ function show(val) {
   return (isFun(val) && val.name) || String(val)
 }
 
-function req(val, fun) {
-  reqValidator(fun)
+function valid(val, fun) {
   if (!fun(val)) {
     throw TypeError(`expected ${show(val)} to satisfy test ${show(fun)}`)
   }
   return val
 }
 
-function reqValidator(fun) {
-  if (!isFun(fun)) {
-    throw TypeError(`expected validator function, got ${show(fun)}`)
-  }
-}
-
-function reqInst(val, cls) {
+function validInst(val, cls) {
   if (!isInst(val, cls)) {
     const cons = isComp(val) ? val.constructor : undefined
     throw TypeError(`expected ${show(val)}${cons ? ` (instance of ${show(cons)})` : ``} to be an instance of ${show(cls)}`)
@@ -180,8 +173,8 @@ function reqInst(val, cls) {
 }
 
 function optInst(val, cls) {
-  req(cls, isCls)
-  return isNil(val) ? val : reqInst(val, cls)
+  valid(cls, isCls)
+  return isNil(val) ? val : validInst(val, cls)
 }
 
-function str(val) {return isNil(val) ? `` : req(val, isStr)}
+function str(val) {return isNil(val) ? `` : valid(val, isStr)}
