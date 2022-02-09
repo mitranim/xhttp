@@ -6,8 +6,12 @@ export const PUT = `PUT`
 export const PATCH = `PATCH`
 export const DELETE = `DELETE`
 
-export const CONTENT_TYPE = `content-type`
+export const TYPE_HTML = `text/html`
 export const TYPE_JSON = `application/json`
+export const TYPE_FORM_MULTI = `multipart/form-data`
+export const TYPE_FORM_URL = `application/x-www-form-urlencoded`
+
+export const CONTENT_TYPE = `content-type`
 export const HEAD_JSON = Object.freeze({[CONTENT_TYPE]: TYPE_JSON})
 
 export function jsonDecode(val) {return str(val) ? JSON.parse(val) : null}
@@ -34,9 +38,12 @@ export class Err extends Error {
 export function req() {return new Req()}
 
 export class Req {
-  async fetch() {return this.Res.from(await fetch(this.valid()))}
+  async fetch() {return this.Res.from(await fetch(this.req()))}
   async fetchOk() {return (await this.fetch()).okRes()}
   async fetchOkText() {return (await this.fetch()).okText()}
+
+  // TODO: consider automatically specifying `accept: application/json`
+  // unless the `accept` header is already set.
   async fetchOkJson() {return (await this.fetch()).okJson()}
 
   mut({headers, ...rest}) {
@@ -45,7 +52,7 @@ export class Req {
     return this
   }
 
-  valid() {return new Request(this.url, this)}
+  req() {return new Request(this.url, this)}
   to(val) {return this.url = val, this}
   sig(val) {return this.signal = val, this}
   meth(val) {return this.method = str(val) || undefined, this}
@@ -82,7 +89,7 @@ export class Res extends Response {
   async okRes() {
     if (!this.ok) {
       const msg = (await this.text()) || `unknown fetch error`
-      throw new Err(msg, this.status, this)
+      throw new this.Err(msg, this.status, this)
     }
     return this
   }
@@ -90,12 +97,13 @@ export class Res extends Response {
   async okText() {return (await this.okRes()).text()}
   async okJson() {return (await this.okRes()).json()}
 
+  get Err() {return Err}
+  get [Symbol.toStringTag]() {return this.constructor.name}
+
   static from(res) {
     validInst(res, Response)
     return new this(res.body, res, res)
   }
-
-  get [Symbol.toStringTag]() {return this.constructor.name}
 }
 
 export class Head extends Headers {
@@ -115,6 +123,13 @@ export class Head extends Headers {
     valid(key, isStr)
     valid(val, isStr)
     super.append(key, val)
+    return this
+  }
+
+  setOpt(key, val) {
+    valid(key, isStr)
+    val = str(val)
+    if (val && !this.has(key)) this.set(key, val)
     return this
   }
 

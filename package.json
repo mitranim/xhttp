@@ -1,6 +1,6 @@
 {
   "name": "xhttp",
-  "version": "0.15.2",
+  "version": "0.15.3",
   "type": "module",
   "main": "./xhttp.mjs",
   "description": "Tiny shortcuts for using the native fetch API. Provides a fluent builder-style API for request building and response reading.",

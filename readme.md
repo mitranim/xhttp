@@ -32,7 +32,7 @@ Tiny syntactic shortcuts for native `Request`/`Response`/`Headers`/`fetch`.
 In browsers and Deno, import by URL:
 
 ```js
-import * as h from 'https://cdn.jsdelivr.net/npm/xhttp@0.15.2/xhttp.mjs'
+import * as h from 'https://cdn.jsdelivr.net/npm/xhttp@0.15.3/xhttp.mjs'
 ```
 
 When using Node or NPM-oriented bundlers like Esbuild:
@@ -180,6 +180,9 @@ class Res extends Response {
   */
   okJson(): Promise<any>
 
+  // Class used for response errors. Can override in subclass.
+  get Err(): {new(): Err}
+
   // Shortcut for constructing from another response.
   static from(res: Response): Res
 }
@@ -210,6 +213,12 @@ class Head extends Headers {
   append(key, val: string): Head
 
   /*
+  Similar to `.set`, but does nothing if the key is already present, or if the
+  value is empty.
+  */
+  setOpt(key: string, val?: string): Head
+
+  /*
   Similar to `Set.prototype.clear`. Removes all content. Mutates and returns
   the same reference.
   */
@@ -230,6 +239,10 @@ Sanity-checking wrapper for [`JSON.stringify`](https://developer.mozilla.org/en-
 Some APIs are exported but undocumented to avoid bloating the docs. Check the source files and look for `export`.
 
 ## Changelog
+
+### 0.15.3
+
+Add `Head..setOpt`, `Res..Err`. Minor bugfixes.
 
 ### 0.15.2
 
