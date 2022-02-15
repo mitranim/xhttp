@@ -104,36 +104,36 @@ class Req extends RequestInit {
   req(): Request
 
   // Sets `.url` and returns the same reference.
-  to(val: string | {toString(): string}): Res
+  to(val: string | {toString(): string}): Req
 
   // Sets `.signal` and returns the same reference.
-  sig(val: AbortSignal): Res
+  sig(val: AbortSignal): Req
 
   // Sets `.method` and returns the same reference.
-  meth(val: string): Res
+  meth(val: string): Req
 
   // Sets `.body` and returns the same reference. Short for "input".
-  inp(val: BodyInit): Res
+  inp(val: BodyInit): Req
 
   // JSON-encodes the input, sets `.body`, and sets JSON request headers.
   // Does NOT set the `accept` header. Returns the same reference.
-  json(val: any): Res
+  json(val: any): Req
 
   // Shortcuts for setting the corresponding HTTP method.
-  get(): Res
-  post(): Res
-  put(): Res
-  patch(): Res
-  delete(): Res
+  get(): Req
+  post(): Req
+  put(): Req
+  patch(): Req
+  delete(): Req
 
   // Idempotently sets `.headers` and returns the resulting reference.
   head(): Head
 
   // Shortcuts for modifying the headers. All mutate and return the request.
-  headSet(key, val: string): Res
-  headAppend(key, val: string): Res
-  headDelete(key: string): Res
-  headMut(src: Headers | Record<string, string>): Res
+  headSet(key, val: string): Req
+  headAppend(key, val: string): Req
+  headDelete(key: string): Req
+  headMut(src: Headers | Record<string, string>): Req
 
   // Class used for `.headers`. Can override in subclass.
   get Head(): {new(): Head}
